@@ -1,10 +1,9 @@
-# Near & Next
+# Chicago transit display
 
 An account-free Chicago neighborhood mobility board for a lobby, kitchen, or spare screen. Built with React, TypeScript, Protomaps/MapLibre, and a small Rust/Axum service.
 
 **MVP:** local configuration, nearby stop discovery, transit arrivals, Divvy station availability and nearby e-bikes, shareable display links, and fullscreen display mode. The first launch is an explicitly labeled demo. Live mode never substitutes sample arrivals for unavailable data.
 
-![Near & Next demo dashboard with Protomaps neighborhood map](docs/preview.png)
 
 ## Run locally
 
@@ -31,7 +30,7 @@ Select **Live board** in the header. Use **Customize** to choose from the live c
 
 ## What works
 
-- Pin separate CTA bus stops, CTA stations, Metra places, and Divvy stations. Filter routes/destinations and choose one to five arrivals.
+- Pin separate CTA bus stops, CTA stations, Metra places, and Divvy stations. Filter routes/destinations and choose one to five arrivals per direction.
 - Find places around a fixed Chicago entrance using a keyboard-accessible list and a Protomaps map. Use GPS only on request, edit coordinates, or submit an address when Geocodio is configured.
 - Recompute nearby Divvy e-bike/scooter search rules from fresh available vehicles. Scooter results require positively classified vehicles in the enabled feed; this is not a promise of citywide scooter coverage.
 - Keep observed zero, unknown, closed, stale, missing, and disconnected states distinct. No indefinite “Due” predictions and no offline vehicle inventory presented as current.
@@ -90,4 +89,24 @@ For a production build, run `npm run build` and `cargo build --release --manifes
 
 ## License and attribution
 
-Source code is [MIT licensed](LICENSE). Provider data, map tiles, fonts, and library dependencies retain their respective licenses. See [data and map sources](docs/data-sources.md). Near & Next is not affiliated with or endorsed by CTA, Metra, Divvy/Lyft, Protomaps, or the City of Chicago.
+Source code is [MIT licensed](LICENSE). Provider data, map tiles, fonts, and library dependencies retain their respective licenses. See [data and map sources](docs/data-sources.md). Chicago transit display is not affiliated with or endorsed by CTA, Metra, Divvy/Lyft, Protomaps, or the City of Chicago.
+
+## Map and route geometry
+
+The desktop layout uses equal-width mobility and map panes. Stop labels include operator logos, pedal/e-bike counts, and the next two available times for each route and destination. Undocked Divvy vehicles appear at their reported coordinates. The map retains all selected places while the mobility list paginates. Map lines can be toggled independently for CTA buses, CTA rail, and Metra. Narrow screens stack the list and map; crowded map labels open a keyboard-accessible detail view.
+
+`public/data/transit-routes.geojson` is a versioned snapshot of official CTA and Metra GTFS shapes (125 bus routes, 8 CTA rail lines, 11 Metra lines in the September 14, 2026 import). It joins `trips.txt` to `shapes.txt`, retains separate variants, orders vertices by sequence, and simplifies within four meters. These are route paths, not an assertion of current service; short-term detours may be absent. Metra live departures remain unconnected and are labeled accordingly. Demo Metra times are illustrative.
+
+Refresh the snapshot before a release when needed:
+
+```sh
+cargo run --manifest-path server/Cargo.toml --bin import-routes
+```
+
+For an offline/reproducible import, pass the output file and downloaded archives:
+
+```sh
+cargo run --manifest-path server/Cargo.toml --bin import-routes -- public/data/transit-routes.geojson /path/to/cta.zip /path/to/metra.zip
+```
+
+Arrival limits now apply per route/destination; the API retains at least two per group for map labels, capped at 100 events per card. Existing configuration and shared links remain compatible. Legacy browser-storage keys are retained so saved displays are not reset.

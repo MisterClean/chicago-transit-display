@@ -20,7 +20,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     let listener = tokio::net::TcpListener::bind(&address).await?;
     start_collectors(state.clone());
-    println!("Near & Next listening on {}", listener.local_addr()?);
+    println!(
+        "Chicago transit display listening on {}",
+        listener.local_addr()?
+    );
     axum::serve(listener, api::router(state, static_dir))
         .with_graceful_shutdown(shutdown())
         .await?;

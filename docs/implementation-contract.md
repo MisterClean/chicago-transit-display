@@ -1,6 +1,6 @@
 # MVP implementation contract
 
-The attached proposed specification is reference material. This contract records MVP implementation choices. Build React/TypeScript/Vite frontend, Rust/Axum backend, no account DB. UI brand: **Near & Next**, Chicago mobility board. Local demo is explicit; never silently replace failed live feeds with demo values. Provider credentials are optional server environment variables. Metra and restricted scooter feeds may remain explicitly pending; do not invent schedules.
+The attached proposed specification is reference material. This contract records MVP implementation choices. Build React/TypeScript/Vite frontend, Rust/Axum backend, no account DB. Minimal branding: Chicago transit display. Local demo is explicit; never silently replace failed live feeds with demo values. Provider credentials are optional server environment variables. Metra and restricted scooter feeds may remain explicitly pending; do not invent schedules.
 
 ## Shared JSON (snake_case)
 
@@ -38,3 +38,11 @@ Demo catalog/board in `src/lib/demo.ts`; exports `demoCatalog`, `defaultConfig`,
 ## Open source
 
 MIT source license, separate provider data/tiles terms; no keys in tracked sources, fixtures, docs, images, logs. `.env.example` placeholders. CI runs TS build, tests, Rust format/clippy/test. No actual GitHub publishing requested.
+
+## Map presentation update
+
+The desktop board uses equal-width list and map panes. `MobilityMap` also accepts `cards`, `now`, `online`, `mode`, and `timeFormat` to render provider marks and current observations, independently of list pagination. Label displacement uses leader lines to preserve geographic meaning. Compact labels open a detail region when available space is insufficient.
+
+For transit, the server applies `selection.limit` per route/destination group, preserving a minimum of two observations per group for the map and bounding the response to 100 events per card. The list honors the requested per-group limit, while map labels show two. CTA predictions remain arrivals as supplied by the provider; scheduled Metra demo events remain explicitly scheduled. No live Metra schedule adapter is introduced.
+
+Local route geometry lives at `/data/transit-routes.geojson` and is schema-validated by the browser. Layer toggles do not change board selections or upstream queries. Route shapes are static and do not establish current service availability.

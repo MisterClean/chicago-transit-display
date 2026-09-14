@@ -17,7 +17,7 @@ export function importConfig(text: string): BoardConfig {
 export function serializeConfig(config: BoardConfig): string { return JSON.stringify(configSchema.parse(config), null, 2); }
 export function exportConfig(config: BoardConfig): void {
   const url = URL.createObjectURL(new Blob([serializeConfig(config)], { type: 'application/json' }));
-  const link = document.createElement('a'); link.href = url; link.download = 'near-and-next-settings.json'; link.click();
+  const link = document.createElement('a'); link.href = url; link.download = 'chicago-transit-settings.json'; link.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 export function displayLink(config: BoardConfig, mode: DataMode = 'live'): string {

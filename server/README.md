@@ -1,4 +1,4 @@
-# Near & Next server
+# Chicago transit display server
 
 A small Rust/Axum server with a versioned, embedded Chicago place catalog, shared in-memory collectors, typed board responses, and optional address lookup. It runs without credentials and reports unconnected providers honestly. It never substitutes demonstrations for live data.
 

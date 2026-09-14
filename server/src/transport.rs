@@ -26,6 +26,7 @@ pub fn allowed_url(url: &Url) -> bool {
             url.host_str(),
             Some(
                 "www.ctabustracker.com"
+                    | "www.transitchicago.com"
                     | "lapi.transitchicago.com"
                     | "gbfs.divvybikes.com"
                     | "gbfs.lyft.com"
@@ -40,7 +41,7 @@ pub fn client() -> Result<Client, reqwest::Error> {
     Client::builder()
         .connect_timeout(Duration::from_secs(5))
         .timeout(Duration::from_secs(12))
-        .user_agent("NearAndNext/0.1 (open-source Chicago mobility display)")
+        .user_agent("ChicagoTransitDisplay/0.1 (open-source Chicago mobility display)")
         // Redirects are not needed by the documented endpoints. Denying every redirect
         // also prevents credentials crossing providers and makes discovery fail closed.
         .redirect(reqwest::redirect::Policy::none())

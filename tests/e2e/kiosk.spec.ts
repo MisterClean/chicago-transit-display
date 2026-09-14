@@ -46,7 +46,7 @@ for (const viewport of [{ width: 1920, height: 1080 }, { width: 1080, height: 19
         cards: [...document.querySelectorAll('.mobility-card')].map(element => {
           const bounds = element.getBoundingClientRect();
           return {
-            title: element.querySelector('h2')!.textContent!,
+            title: element.querySelector('h3')!.textContent!,
             scroll: element.scrollHeight,
             client: element.clientHeight,
             bottom: bounds.bottom,

@@ -30,8 +30,8 @@ test('production shell reloads offline without caching live data and reconnects 
   expect(cachedPaths.some(path => /^\/(api|catalog|health)\//.test(path))).toBe(false);
   await context.setOffline(true);
   await page.reload();
-  await expect(page.getByRole('heading', { name: 'Your next move.' })).toBeVisible();
-  await expect(page.locator('.location-eyebrow')).toContainText('Offline test lobby');
+  await expect(page.getByRole('heading', { name: 'Offline test lobby' })).toBeVisible();
+  await expect(page.locator('.intro-copy h1')).toContainText('Offline test lobby');
   await expect(page.getByLabel('Data mode')).toHaveValue('live');
   await expect(page.getByText(/You’re offline. Saved settings are safe/)).toBeVisible();
   await expect(page.locator('.vehicle-row')).toHaveCount(0);
@@ -39,5 +39,5 @@ test('production shell reloads offline without caching live data and reconnects 
   await expect(page.getByText('DEMO DATA')).toHaveCount(0);
   await context.setOffline(false);
   await expect(page.locator('.vehicle-row').first()).toBeVisible();
-  await expect(page.locator('.location-eyebrow')).toContainText('Offline test lobby');
+  await expect(page.locator('.intro-copy h1')).toContainText('Offline test lobby');
 });

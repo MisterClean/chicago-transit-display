@@ -25,7 +25,7 @@ test('keyboard setup and saved display preferences survive reload', async ({ pag
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Customize', exact: true })).toBeFocused();
   await page.reload();
-  await expect(page.locator('.location-eyebrow')).toContainText('Test lobby');
+  await expect(page.locator('.intro-copy h1')).toContainText('Test lobby');
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
   await expect(page.getByRole('complementary', { name: 'Map of selected stops and vehicles' })).toHaveCount(0);
   await expect(page.locator('.board-clock time')).not.toContainText(/AM|PM/);
@@ -43,9 +43,9 @@ test('pins, filters and reorders a stop, then preserves the selection', async ({
   await page.reload();
   const card = page.getByRole('article', { name: 'Clark/Lake, cta train' });
   await expect(card).toBeVisible();
-  await expect(card.locator('.arrival-row')).toHaveCount(1);
-  await expect(card.locator('.route-pill')).toHaveText('Blue');
-  const cards = await page.locator('.mobility-card h2').allTextContents();
+  await expect(card.locator('.arrival-row')).toHaveCount(2);
+  await expect(card.locator('.route-pill')).toHaveText(['Blue', 'Blue']);
+  const cards = await page.locator('.mobility-card h3').allTextContents();
   expect(cards.indexOf('Clark/Lake')).toBeLessThan(cards.indexOf('Orleans St & Merchandise Mart Plaza'));
 });
 
@@ -72,16 +72,16 @@ test('exports settings and opens a private-label-free independent link with the 
   await sharedPage.route('https://api.protomaps.com/**', route => route.abort());
   await sharedPage.goto(link);
   await expect(sharedPage.getByLabel('Data mode')).toHaveValue('demo');
-  await expect(sharedPage.locator('.location-eyebrow')).not.toContainText('Private test label');
+  await expect(sharedPage.locator('.intro-copy h1')).not.toContainText('Private test label');
   await expect(sharedPage.locator('.mobility-card')).toHaveCount(5);
   await sharedPage.getByRole('button', { name: 'Customize', exact: true }).click();
   await sharedPage.getByRole('tab', { name: 'Display', exact: true }).click();
   await sharedPage.getByLabel('Display label').fill('Independent board');
   await sharedPage.getByRole('button', { name: 'Done', exact: true }).click();
   await sharedPage.reload();
-  await expect(sharedPage.locator('.location-eyebrow')).toContainText('Independent board');
+  await expect(sharedPage.locator('.intro-copy h1')).toContainText('Independent board');
   await page.reload();
-  await expect(page.locator('.location-eyebrow')).toContainText('Private test label');
+  await expect(page.locator('.intro-copy h1')).toContainText('Private test label');
   await sharedContext.close();
 });
 
@@ -97,6 +97,6 @@ test('imports a saved file and rejects invalid imports without erasing the board
   await expect(page.locator('.setup-feedback')).toContainText('Invalid or unsupported');
   await page.getByRole('button', { name: 'Done', exact: true }).click();
   await page.reload();
-  await expect(page.locator('.location-eyebrow')).toContainText('Imported lobby');
+  await expect(page.locator('.intro-copy h1')).toContainText('Imported lobby');
   await expect(page.locator('.mobility-card')).toHaveCount(5);
 });

@@ -361,3 +361,52 @@ fn fall_back_arrival_follows_source_observation_even_when_first_clock_time_is_cl
     let arrival = cta_arrival(&json!("2026-11-01T01:30:00"), source).unwrap();
     assert_eq!(arrival.to_rfc3339(), "2026-11-01T07:30:00+00:00");
 }
+
+#[tokio::test]
+async fn board_keeps_two_predictions_per_direction_even_with_a_one_entry_list_limit() {
+    let state = AppState::new(Settings {
+        rail_key: Some("fixture".into()),
+        ..Settings::default()
+    })
+    .unwrap();
+    let mut records = Vec::new();
+    for i in 0..8 {
+        let mut record = rail_record();
+        record["rn"] = json!(format!("train-{i}"));
+        record["destNm"] = json!(if i < 4 { "Kimball" } else { "Loop" });
+        record["arrT"] = json!(format!("2026-09-14T11:{:02}:00", i + 1));
+        records.push(record);
+    }
+    let parsed = parse_rail(
+        &json!({"ctatt":{"tmst":"2026-09-14T11:00:00","errCd":"0","eta":records}}),
+        "40460",
+        now(),
+    )
+    .unwrap();
+    state
+        .cache
+        .write()
+        .await
+        .transit
+        .insert("cta:rail_station:40460".into(), parsed);
+    state
+        .cache
+        .write()
+        .await
+        .demand
+        .insert("cta:rail_station:40460".into(), now());
+    let mut query = selection("cta:rail_station:40460");
+    query.selections[0].limit = 1;
+    let board = state.board(query, now()).await;
+    assert_eq!(board.cards[0].events.len(), 4);
+    for destination in ["Kimball", "Loop"] {
+        assert_eq!(
+            board.cards[0]
+                .events
+                .iter()
+                .filter(|event| event.destination == destination)
+                .count(),
+            2
+        );
+    }
+}

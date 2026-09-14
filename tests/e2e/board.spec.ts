@@ -10,7 +10,7 @@ test('demo is explicit, accessible, and opens its sources dialog by keyboard', a
   const exceptions: string[] = [];
   page.on('pageerror', error => exceptions.push(error.message));
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: 'Your next move.' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'River North' })).toBeVisible();
   await expect(page.getByLabel('Data mode')).toHaveValue('demo');
   await expect(page.getByText('Sample arrivals & availability · not for trip planning')).toBeVisible();
   await expect(page.locator('.mobility-card')).toHaveCount(5);

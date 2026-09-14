@@ -16,9 +16,9 @@ export const demoCatalog: Catalog = {
 export const defaultConfig: BoardConfig = {
   version: 1, label: 'River North', origin: { lat: 41.8895, lon: -87.6354 },
   selections: [
-    { id: 'mart', place_id: 'cta:rail_station:40460', route: 'Brown', limit: 3 },
-    { id: 'orleans', place_id: 'cta:bus_stop:4626', route: '37', limit: 3 },
-    { id: 'union', place_id: 'metra:metra_station:CUS', route: 'BNSF', limit: 3 },
+    { id: 'mart', place_id: 'cta:rail_station:40460', route: 'Brown', limit: 2 },
+    { id: 'orleans', place_id: 'cta:bus_stop:4626', route: '37', limit: 2 },
+    { id: 'union', place_id: 'metra:metra_station:CUS', route: 'BNSF', limit: 2 },
     { id: 'divvy-mart', place_id: 'divvy:shared_station:a3a5428e-a135-11e9-9cda-0a87ae2ba916', limit: 3 },
   ],
   vehicle_rules: [{ id: 'nearby-electric', provider_id: 'divvy', type: 'electric', radius_m: 800, limit: 3 }],
@@ -40,10 +40,13 @@ export function createDemoBoard(config: BoardConfig, now = new Date()): BoardRes
     const metra = place.kind === 'metra_station';
     const route = selection.route || place.routes[0] || '';
     const destination = selection.destination || (metra ? 'Aurora' : place.kind === 'bus_stop' ? 'To Fullerton' : route === 'Blue' ? 'O’Hare' : 'Kimball');
-    const events: TransitEvent[] = station ? [] : [metra ? 18 : index === 0 ? 3 : 5, metra ? 48 : 11, metra ? 78 : 19].slice(0, selection.limit).map((minutes, n) => ({
+    const events: TransitEvent[] = station ? [] : [metra ? 18 : index === 0 ? 3 : 5, metra ? 48 : 11, metra ? 78 : 19, metra ? 108 : 26, metra ? 138 : 33].slice(0, Math.max(2, selection.limit)).map((minutes, n) => ({
       id: `demo-${selection.id}-${n}`, route, destination, expected_at: metra ? null : new Date(+now + minutes * 60000).toISOString(), scheduled_at: metra ? new Date(+now + minutes * 60000).toISOString() : null,
       time_basis: metra ? 'schedule' : 'prediction', status: 'normal', approaching: false, event_kind: metra ? 'departure' : 'arrival', color: place.color, freshness: fresh(),
     }));
+    if (place.kind === 'rail_station' && !selection.destination) {
+      events.push(...events.map((event, n) => ({ ...event, id: `${event.id}-opposite`, destination: route === 'Blue' ? 'Forest Park' : 'Loop', expected_at: new Date(+now + (6 + n * 9) * 60000).toISOString() })));
+    }
     return { id: selection.id, kind: place.kind, title: place.name, subtitle: place.direction || (station ? 'Divvy station' : metra ? 'Commuter rail' : 'CTA station'), provider_id: place.provider_id, state: 'ready', place, events, vehicles: [], alerts: [], freshness: fresh(), ...(station ? { availability: { classic: 7, electric: 12, scooters: null, docks: 9, rental_state: 'available' as const } } : {}) };
   });
   for (const rule of config.vehicle_rules) {

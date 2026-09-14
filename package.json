@@ -1,5 +1,5 @@
 {
-  "name": "near-and-next",
+  "name": "chicago-transit-display",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -28,6 +28,7 @@
     "zod": "^4.3.0"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
     "@playwright/test": "^1.58.0",
     "@types/node": "^26.5.1",
     "@types/react": "^19.2.0",

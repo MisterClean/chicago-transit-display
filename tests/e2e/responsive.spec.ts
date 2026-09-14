@@ -5,7 +5,7 @@ for (const viewport of [{ width: 852, height: 903 }, { width: 390, height: 844 }
     await page.setViewportSize(viewport);
     await page.route('https://api.protomaps.com/**', route => route.abort());
     await page.goto('/');
-    await expect(page.getByRole('heading', { name: 'Your next move.' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'River North' })).toBeVisible();
     const geometry = await page.evaluate(() => ({
       pageWidth: document.documentElement.scrollWidth,
       cards: [...document.querySelectorAll('.mobility-card')].map(element => {
@@ -45,7 +45,7 @@ test('short desktop pages rotate through all selected connections', async ({ pag
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.route('https://api.protomaps.com/**', route => route.abort());
   await page.goto('/');
-  await expect(page.locator('.mobility-card')).toHaveCount(4);
+  await expect(page.locator('.mobility-card')).toHaveCount(3);
   await page.getByRole('button', { name: 'Next board page' }).click();
   await expect(page.getByRole('article', { name: 'E-bikes nearby, nearby e-bikes' })).toBeVisible();
   await page.getByRole('button', { name: 'Previous board page' }).click();

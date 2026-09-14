@@ -236,6 +236,7 @@ impl AppState {
             } else if let Some(snapshot) = cache.transit.get(&place.id) {
                 let mut freshness = snapshot.freshness.clone();
                 freshness.update(now);
+                let mut direction_counts = HashMap::new();
                 card.events = snapshot
                     .events
                     .iter()
@@ -254,7 +255,14 @@ impl AppState {
                                 .as_ref()
                                 .is_none_or(|d| d.eq_ignore_ascii_case(&e.destination))
                     })
-                    .take(selection.limit)
+                    .filter(|event| {
+                        let count = direction_counts
+                            .entry((&event.route, &event.destination))
+                            .or_insert(0_usize);
+                        *count += 1;
+                        *count <= selection.limit.max(2)
+                    })
+                    .take(100)
                     .cloned()
                     .map(|mut e| {
                         e.freshness.update(now);
