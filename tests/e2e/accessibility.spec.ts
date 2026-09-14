@@ -1,6 +1,12 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    if (!localStorage.getItem('near-next:mode')) localStorage.setItem('near-next:mode', 'demo');
+  });
+});
+
 for (const theme of ['dark', 'light'] as const) {
   test(`board and settings meet automated accessibility checks in ${theme} mode`, async ({ page }) => {
     await page.route('https://api.protomaps.com/**', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ version: 8, sources: {}, layers: [{ id: 'background', type: 'background', paint: { 'background-color': theme === 'dark' ? '#13242b' : '#eef0ee' } }] }) }));

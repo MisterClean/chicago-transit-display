@@ -1,5 +1,11 @@
 import { expect, test } from '@playwright/test';
 
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    if (!localStorage.getItem('near-next:mode')) localStorage.setItem('near-next:mode', 'demo');
+  });
+});
+
 test('map renderer loads its bundled worker and keeps text alternatives available', async ({ page }) => {
   const failures: { path: string; error: string | null }[] = [];
   page.on('requestfailed', request => {

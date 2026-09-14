@@ -1,6 +1,9 @@
 import { expect, test } from '@playwright/test';
 
 test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    if (!localStorage.getItem('near-next:mode')) localStorage.setItem('near-next:mode', 'demo');
+  });
   await page.route('https://api.protomaps.com/**', route => route.abort());
 });
 

@@ -1,5 +1,11 @@
 import { expect, test } from '@playwright/test';
 
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    if (!localStorage.getItem('near-next:mode')) localStorage.setItem('near-next:mode', 'demo');
+  });
+});
+
 for (const viewport of [{ width: 852, height: 903 }, { width: 390, height: 844 }]) {
   test(`small browser ${viewport.width}×${viewport.height} keeps cards readable and settings reachable`, async ({ page }) => {
     await page.setViewportSize(viewport);

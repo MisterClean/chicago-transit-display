@@ -7,7 +7,7 @@ import type { BoardConfig, BoardQuery, BoardResponse, Catalog, DataMode, Provide
 const MODE_KEY = 'near-next:mode';
 function initialMode(): DataMode {
   if (window.location.hash.startsWith('#v1=')) return new URLSearchParams(window.location.hash.slice(1)).get('mode') === 'demo' ? 'demo' : 'live';
-  try { return localStorage.getItem(MODE_KEY) === 'live' ? 'live' : 'demo'; } catch { return 'demo'; }
+  try { return localStorage.getItem(MODE_KEY) === 'demo' ? 'demo' : 'live'; } catch { return 'live'; }
 }
 async function getJson(url: string, signal: AbortSignal, body?: unknown): Promise<unknown> {
   const response = await fetch(url, { method: body ? 'POST' : 'GET', signal, headers: body ? { 'Content-Type': 'application/json' } : {}, ...(body ? { body: JSON.stringify(body) } : {}) });

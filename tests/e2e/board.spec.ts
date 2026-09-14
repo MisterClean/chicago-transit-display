@@ -2,6 +2,9 @@ import { expect, test } from '@playwright/test';
 import { createDemoBoard, defaultConfig, demoCatalog } from '../../src/lib/demo';
 
 test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    if (!localStorage.getItem('near-next:mode')) localStorage.setItem('near-next:mode', 'demo');
+  });
   // Browser workflows remain deterministic and do not spend map-provider quota.
   await page.route('https://api.protomaps.com/**', route => route.abort());
 });

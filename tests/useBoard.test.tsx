@@ -49,6 +49,7 @@ describe('board requests and recovery', () => {
   });
 
   it('runs an explicit demo without calling live APIs', async () => {
+    localStorage.setItem('near-next:mode', 'demo');
     const fetchMock = vi.fn();
     vi.stubGlobal('fetch', fetchMock);
     await act(async () => root.render(<Harness />));
@@ -58,6 +59,7 @@ describe('board requests and recovery', () => {
   });
 
   it('keeps the current board when the already-active mode button is pressed', async () => {
+    localStorage.setItem('near-next:mode', 'demo');
     vi.stubGlobal('fetch', vi.fn());
     await act(async () => root.render(<Harness />));
     const snapshot = current.board;
@@ -67,6 +69,7 @@ describe('board requests and recovery', () => {
   });
 
   it('clears demo cards immediately on live-mode switch and times out stalled network calls', async () => {
+    localStorage.setItem('near-next:mode', 'demo');
     vi.stubGlobal('fetch', vi.fn((_url: string, options: RequestInit) => new Promise((_resolve, reject) => {
       options.signal?.addEventListener('abort', () => reject(new DOMException('This operation was aborted', 'AbortError')), { once: true });
     })));
@@ -91,6 +94,16 @@ describe('board requests and recovery', () => {
     expect(current.error).toMatch(/503/);
     expect(current.board).toBeNull();
     expect(current.catalog.places).toEqual([]);
+  });
+
+  it('starts a new display in live mode and shows a connection error instead of demo arrivals', async () => {
+    const fetchMock = vi.fn(async () => respond({ error: 'Fixture unavailable' }, 503));
+    vi.stubGlobal('fetch', fetchMock);
+    await act(async () => root.render(<Harness />));
+    expect(current.mode).toBe('live');
+    expect(fetchMock).toHaveBeenCalled();
+    expect(current.error).toMatch(/503/);
+    expect(current.board).toBeNull();
   });
 
   it('keeps successful snapshots stale after failure and does not refetch for presentation changes', async () => {

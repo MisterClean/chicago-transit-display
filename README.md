@@ -2,7 +2,7 @@
 
 An account-free Chicago neighborhood mobility board for a lobby, kitchen, or spare screen. Built with React, TypeScript, Protomaps/MapLibre, and a small Rust/Axum service.
 
-**MVP:** local configuration, nearby stop discovery, transit arrivals, Divvy station availability and nearby e-bikes, shareable display links, and fullscreen display mode. The first launch is an explicitly labeled demo. Live mode never substitutes sample arrivals for unavailable data.
+**MVP:** local configuration, nearby stop discovery, transit arrivals, Divvy station availability and nearby e-bikes, shareable display links, and fullscreen display mode. New displays start in live mode. Live mode never substitutes sample arrivals for unavailable data; an explicitly selected demo remains available for previews.
 
 
 ## Run locally
@@ -16,7 +16,7 @@ cp .env.example .env.local
 npm run dev
 ```
 
-Open [localhost:5173](http://localhost:5173). Demo mode works without a backend; mapping requires a Protomaps key or a compatible custom style URL. Settings, display mode, import/export, and shared links work in the demo.
+Open [localhost:5173](http://localhost:5173). Mapping requires a Protomaps key or a compatible custom style URL. The display starts in live mode and needs the backend below. For a frontend-only preview, choose **Demo board** in the header; the browser remembers an explicit mode choice.
 
 For live data, start the backend in another terminal:
 
@@ -26,7 +26,9 @@ cp server/.env.example server/.env
 npm run dev:server
 ```
 
-Select **Live board** in the header. Use **Customize** to choose from the live catalog. The backend starts with no paid provider requests enabled. See [server setup and provider configuration](server/README.md).
+Set `DIVVY_ENABLED=true` in `server/.env` for real station counts and undocked bikes; this public feed needs no API key. Allow up to 60 seconds for the first live observations. CTA bus and train predictions need separate `CTA_BUS_API_KEY` and `CTA_TRAIN_API_KEY` values in the same file, followed by a backend restart. Missing providers stay marked **Not connected**. Metra departures are not yet implemented.
+
+Use **Customize** to choose from the live catalog. If this browser previously selected a demo, change the header to **Live board** once. The backend starts with no paid provider requests enabled. See [server setup and provider configuration](server/README.md).
 
 ## What works
 
