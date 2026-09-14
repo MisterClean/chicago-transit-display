@@ -2,6 +2,8 @@
 
 An account-free Chicago neighborhood mobility board for a lobby, kitchen, or spare screen. Built with React, TypeScript, Protomaps/MapLibre, and a small Rust/Axum service.
 
+An independent app, not made or endorsed by CTA. See the [CTA developer review and API application description](docs/cta-compliance-review.md) before enabling live CTA feeds.
+
 **MVP:** local configuration, nearby stop discovery, transit arrivals, Divvy station availability and nearby e-bikes, shareable display links, and fullscreen display mode. New displays start in live mode. Live mode never substitutes sample arrivals for unavailable data; an explicitly selected demo remains available for previews.
 
 
@@ -95,7 +97,7 @@ Source code is [MIT licensed](LICENSE). Provider data, map tiles, fonts, and lib
 
 ## Map and route geometry
 
-The desktop layout uses equal-width mobility and map panes. Stop labels include operator logos, pedal/e-bike counts, and the next two available times for each route and destination. Undocked Divvy vehicles appear at their reported coordinates. The map retains all selected places while the mobility list paginates. Map lines can be toggled independently for CTA buses, CTA rail, and Metra. Narrow screens stack the list and map; crowded map labels open a keyboard-accessible detail view.
+The desktop layout uses equal-width mobility and map panes. Stop labels include plain operator names, pedal/e-bike counts, and the next two available times for each route and destination. Undocked Divvy vehicles appear at their reported coordinates. The map retains all selected places while the mobility list paginates. Map lines can be toggled independently for CTA buses, CTA rail, and Metra. Narrow screens stack the list and map; crowded map labels open a keyboard-accessible detail view.
 
 `public/data/transit-routes.geojson` is a versioned snapshot of official CTA and Metra GTFS shapes (125 bus routes, 8 CTA rail lines, 11 Metra lines in the September 14, 2026 import). It joins `trips.txt` to `shapes.txt`, retains separate variants, orders vertices by sequence, and simplifies within four meters. These are route paths, not an assertion of current service; short-term detours may be absent. Metra live departures remain unconnected and are labeled accordingly. Demo Metra times are illustrative.
 

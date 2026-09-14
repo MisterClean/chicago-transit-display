@@ -1,6 +1,6 @@
 # Data and map sources
 
-Source code licensing does not grant rights to upstream data or map services. Operators must review the applicable provider terms for their public display. Operator marks and their sources are documented below.
+Source code licensing does not grant rights to upstream data or map services. Operators must review the applicable provider terms for their public display. Providers are identified with plain text; no operator logo images are bundled.
 
 | Integration | Primary references | Implementation notes |
 | --- | --- | --- |
@@ -28,14 +28,10 @@ The interface self-hosts the Latin variable WOFF2 fonts in `public/fonts`; it ma
 
 The licenses were retrieved from the [DM Sans](https://github.com/google/fonts/blob/main/ofl/dmsans/OFL.txt) and [Manrope](https://github.com/google/fonts/blob/main/ofl/manrope/OFL.txt) directories of the official Google Fonts repository on 14 September 2026. The fonts retain the OFL; the app’s MIT license does not replace it. To refresh fonts, install the reviewed Fontsource versions, copy the corresponding Latin WOFF2 files into the paths above, retain the copyright/license files, and update this provenance record. The npm lockfile records the source package integrity hashes.
 
-## Route paths and operator marks
+## Route paths and provider labels
 
 The checked-in route snapshot was imported on September 14, 2026 from [CTA GTFS](https://www.transitchicago.com/downloads/sch_data/google_transit.zip) and [Metra GTFS](https://schedules.metrarail.com/gtfs/schedule.zip). The import timestamp and source URLs are embedded in the GeoJSON. Only route geometry is included; service calendars and active detours are not inferred. All distinct supplied shapes are retained after a four-meter simplification. The snapshot is refreshed with the `import-routes` Rust binary and served locally, with no upstream fetch on board refresh.
 
-Operator marks identify the provider, with no endorsement claim. They retain their owners' trademark rights and are excluded from the source-code MIT license:
-
-- CTA: [official site header asset](https://www.transitchicago.com/cms/images/layout/logo.png); the circular mark is displayed using CSS cropping.
-- Divvy/Lyft: [official Divvy site asset](https://cdn.lyft.com/static/bikesharefe/logo/Divvy-main.svg).
-- Metra: [Metra wordmark source and attribution](https://commons.wikimedia.org/wiki/File:Metra_Logo.svg).
+CTA, Metra and Divvy are identified by plain text in cards, map labels and stop details. Operator logo images have been removed from the app and offline cache manifest. Provider names remain their owners' trademarks; these descriptive labels do not imply endorsement. See the [CTA branding guide](https://www.transitchicago.com/developers/branding/) and [repository review](cta-compliance-review.md).
 
 The interface now uses DM Sans only. The existing Manrope files remain available for compatibility.

@@ -22,7 +22,7 @@ fn types() -> HashMap<String, String> {
     ])
 }
 fn bus_record() -> Value {
-    json!({"stpid":"4626","typ":"A","vid":"test-bus","rt":"37","des":"Fullerton","tmstmp":now().timestamp_millis(),"prdtm":(now()+Duration::minutes(4)).timestamp_millis(),"dly":false,"prdctdn":"4"})
+    json!({"stpid":"4626","typ":"A","vid":"test-bus","rt":"37","des":"Fullerton","tmstmp":now().timestamp_millis(),"prdtm":(now()+Duration::minutes(4)).timestamp_millis(),"dly":false,"dyn":0,"prdctdn":"4"})
 }
 fn rail_record() -> Value {
     json!({"staId":"40460","stpId":"30090","rn":"test-run","rt":"Brn","destNm":"Kimball","prdt":"2026-09-14T11:00:00","arrT":"2026-09-14T11:05:00","isSch":"0","isFlt":"0","isDly":"0","isApp":"0"})
@@ -61,6 +61,70 @@ fn bus_milliseconds_and_flags_normalize_without_coercing_unknown() {
     assert_eq!(event.freshness.expires_at, now() + Duration::seconds(180));
     assert!(cta_time(&json!(now().timestamp()), now()).is_none());
 }
+#[test]
+fn bus_dynamic_actions_preserve_public_service_status() {
+    for (action, status) in [
+        (0, "normal"),
+        (1, "canceled"),
+        (2, "normal"),
+        (3, "normal"),
+        (4, "skipped"),
+        (6, "normal"),
+        (8, "normal"),
+        (9, "normal"),
+        (10, "normal"),
+        (12, "normal"),
+        (13, "normal"),
+        (14, "delayed"),
+        (15, "delayed"),
+        (18, "canceled"),
+        (19, "normal"),
+    ] {
+        let mut record = bus_record();
+        record["dyn"] = json!(action);
+        record["prdctdn"] = json!("DUE");
+        if status == "delayed" {
+            // A dynamic delay supersedes an elapsed countdown even when dly=false.
+            record["prdtm"] = json!((now() - Duration::minutes(2)).timestamp_millis());
+        }
+        let parsed = parse_bus(
+            &json!({"bustime-response":{"prd":[record]}}),
+            &["4626".into()],
+            now(),
+        )
+        .unwrap();
+        assert_eq!(parsed["4626"].events[0].status, status, "dyn={action}");
+        assert_eq!(parsed["4626"].events[0].approaching, status == "normal");
+    }
+}
+
+#[test]
+fn bus_invalidated_trips_are_hidden_and_unknown_actions_fail_closed() {
+    for action in [
+        json!(16),
+        json!("17"),
+        json!(99),
+        json!("invalid"),
+        Value::Null,
+    ] {
+        let mut record = bus_record();
+        record["dyn"] = action.clone();
+        let result = parse_bus(
+            &json!({"bustime-response":{"prd":[record]}}),
+            &["4626".into()],
+            now(),
+        );
+        if action == json!(16) || action == json!("17") {
+            assert!(result.unwrap()["4626"].events.is_empty());
+        } else {
+            assert!(
+                result.is_err(),
+                "Unexpected action must not become a pickup"
+            );
+        }
+    }
+}
+
 #[test]
 fn malformed_or_future_source_rejects_entire_transit_response() {
     for source in [

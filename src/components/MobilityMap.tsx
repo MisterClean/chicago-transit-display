@@ -7,7 +7,7 @@ import { availableVehicles, cardState, departureGroups } from '../lib/presentati
 import { formatEvent } from '../lib/format';
 import { placeMapLabels } from '../lib/map-layout';
 import { loadRoutes, type RouteCollection } from '../lib/routes';
-import OperatorLogo from './OperatorLogo';
+import OperatorLabel from './OperatorLabel';
 import './MobilityMap.css';
 
 type Props = {
@@ -27,7 +27,7 @@ function MapCardInfo({ card, now, online, timeFormat }: { card: BoardCard; now: 
   const groups = departureGroups(card.events, now);
   return <>{groups.length ? groups.map(group => <span className="map-departure" key={`${group.route}:${group.destination}`}>
     <span className="map-destination"><b>{group.route}</b> · {group.destination}</span>
-    <span className="map-times">{group.events.map(event => <span key={event.id}>{formatEvent(event, now, timeFormat).replace(/^Scheduled\s*[·:]\s*/, '')}</span>)}</span>
+    <span className="map-times">{group.events.map(event => <span key={event.id}>{formatEvent(event, now, timeFormat).replace(/^Scheduled\s*[·:]\s*/, '')}{event.time_basis === 'schedule' && !group.events.every(item => item.time_basis === 'schedule') && <small>Scheduled</small>}</span>)}</span>
     {group.events.every(event => event.time_basis === 'schedule') && <small>Scheduled</small>}
   </span>) : <span className="map-data-status">No predictions available</span>}{state === 'stale' && <span className="map-data-status">{online ? 'Stale predictions' : 'Offline · last known predictions'}</span>}</>;
 }
@@ -167,7 +167,7 @@ export default function MobilityMap({ origin, places, vehicles = [], cards = [],
         const place = places.find(p => p.id === label.id)!;
         const card = mergedCards.get(label.id);
         return <button type="button" key={label.id} className={`map-stop-label${label.compact ? ' compact-label' : ''}`} style={{ left: label.left, top: label.top, width: label.compact ? 44 : labelWidth }} data-place-id={label.id} ref={element => { if (element && !label.compact) labelElements.current.set(label.id, element); else labelElements.current.delete(label.id); }} aria-label={`${place.name}. ${label.compact ? 'Show details' : 'Show stop details'}`} aria-expanded={selected === label.id} onClick={event => { selectedTrigger.current = event.currentTarget; setSelected(selected === label.id ? undefined : label.id); }}>
-          <span className="map-stop-heading"><OperatorLogo provider={place.provider_id} />{!label.compact && <strong>{place.name}</strong>}</span>
+          <span className="map-stop-heading"><OperatorLabel provider={place.provider_id} />{!label.compact && <strong>{place.name}</strong>}</span>
           {!label.compact && <>{card && <MapCardInfo card={card} now={now} online={online} timeFormat={timeFormat} />}{mode === 'demo' && <small className="map-sample-label">Demo data</small>}</>}
         </button>;
       })}
@@ -178,7 +178,7 @@ export default function MobilityMap({ origin, places, vehicles = [], cards = [],
       })}
       {originPoint && <span className="map-origin" style={{ left: originPoint.x, top: originPoint.y }} role="img" aria-label="Board location" title="Board location" />}
       <div className="map-navigation" aria-label="Map navigation"><button aria-label="Zoom in" onClick={() => instance?.zoomIn({ duration: reducedMotion() ? 0 : 150 })}><Plus size={18} /></button><button aria-label="Zoom out" onClick={() => instance?.zoomOut({ duration: reducedMotion() ? 0 : 150 })}><Minus size={18} /></button><button aria-label="Fit all stops" onClick={fit}><LocateFixed size={18} /></button></div>
-      {selectedPlace && <section className="map-selected-detail" aria-label={`${selectedPlace.name} details`} onKeyDown={event => { if (event.key === 'Escape') closeDetail(); }}><header><OperatorLogo provider={selectedPlace.provider_id} /><strong>{selectedPlace.name}</strong><button ref={detailClose} aria-label="Close stop details" onClick={closeDetail}><X size={18} /></button></header>{mergedCards.has(selectedPlace.id) ? <MapCardInfo card={mergedCards.get(selectedPlace.id)!} now={now} online={online} timeFormat={timeFormat} /> : <span>{selectedPlace.routes.join(' · ')}</span>}{mode === 'demo' && <small>Demo data</small>}</section>}
+      {selectedPlace && <section className="map-selected-detail" aria-label={`${selectedPlace.name} details`} onKeyDown={event => { if (event.key === 'Escape') closeDetail(); }}><header><OperatorLabel provider={selectedPlace.provider_id} /><strong>{selectedPlace.name}</strong><button ref={detailClose} aria-label="Close stop details" onClick={closeDetail}><X size={18} /></button></header>{mergedCards.has(selectedPlace.id) ? <MapCardInfo card={mergedCards.get(selectedPlace.id)!} now={now} online={online} timeFormat={timeFormat} /> : <span>{selectedPlace.routes.join(' · ')}</span>}{mode === 'demo' && <small>Demo data</small>}</section>}
       {!editing && <div className="map-bottom-note">{routesError ? <><span>Route lines unavailable</span><button onClick={() => setAttempt(v => v + 1)}>Retry</button></> : <span>Route paths{routes ? ` · ${new Date(routes.imported_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` : ' loading…'} · may exclude detours</span>}</div>}
     </>}
     {status !== 'ready' && <div className="map-state" role="status"><LocateFixed size={30} /><strong>{status === 'loading' ? 'Loading map…' : 'Map unavailable'}</strong><p>{status === 'loading' ? 'Loading streets and transit routes.' : 'Use the mobility list for stops, arrivals, and bike availability.'}</p>{status === 'unavailable' && (key || customStyle) && <button type="button" className="map-retry" onClick={() => setAttempt(value => value + 1)}>Retry map</button>}</div>}

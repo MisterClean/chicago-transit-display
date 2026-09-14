@@ -37,7 +37,9 @@ export function availableVehicles(card: BoardCard, now: number, online: boolean)
 }
 
 export function routeColor(route: string, color?: string) {
+  // Screen hex specifications in CTA's branding guide; match the server palette.
+  const colors: Record<string, string> = { Brown: '#62361b', Purple: '#522398', Red: '#c60c30', Blue: '#00a1de', Green: '#009b3a', Pink: '#e27ea6', Orange: '#f9461c', Yellow: '#f9e300' };
+  if (colors[route]) return colors[route];
   if (color && /^#?[a-f\d]{6}$/i.test(color)) return color.startsWith('#') ? color : `#${color}`;
-  const colors: Record<string, string> = { Brown: '#996b4b', Purple: '#9467bd', Red: '#c60c30', Blue: '#008bc0', Green: '#009b3a', Pink: '#e27ea6', Orange: '#f9461c', Yellow: '#c5ad00' };
-  return colors[route] ?? '#377dab';
+  return '#377dab';
 }

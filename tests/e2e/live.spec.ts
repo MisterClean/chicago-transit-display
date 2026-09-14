@@ -50,3 +50,30 @@ test('first launch without a backend shows the connection failure and no sample 
   await expect(page.locator('.arrival-time, .vehicle-row, .availability-counts')).toHaveCount(0);
   await expect(page.getByText('DEMO DATA')).toHaveCount(0);
 });
+
+test('mixed train schedules stay labeled in cards and map labels, and canceled buses have no countdown', async ({ page }) => {
+  await page.unroute('https://api.protomaps.com/**');
+  await page.route('https://api.protomaps.com/**', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ version: 8, sources: {}, layers: [{ id: 'background', type: 'background', paint: { 'background-color': '#13242b' } }] }) }));
+  const snapshot = createDemoBoard(defaultConfig);
+  const train = snapshot.cards[0];
+  train.events = train.events.slice(0, 2);
+  train.events[1] = { ...train.events[1], time_basis: 'schedule', scheduled_at: train.events[1].expected_at, expected_at: null };
+  snapshot.cards[1].events[0].status = 'canceled';
+  snapshot.cards[1].events[1].status = 'skipped';
+  await page.route('**/api/v1/**', route => {
+    const path = new URL(route.request().url()).pathname;
+    const data = path.endsWith('/capabilities')
+      ? { schema_version: 1, catalog_version: demoCatalog.version, providers: snapshot.providers, geocoding: false, limits: { max_cards: 12, max_radius_m: 2000 } }
+      : path.endsWith('/catalog') ? demoCatalog : snapshot;
+    return route.fulfill({ contentType: 'application/json', body: JSON.stringify(data) });
+  });
+  await page.goto('/');
+  const card = page.getByRole('article', { name: 'Merchandise Mart, cta train' });
+  await expect(card.locator('.arrival-time').last()).toContainText('Scheduled');
+  await expect(card.locator('.arrival-time').first()).toContainText('min');
+  const bus = page.getByRole('article', { name: 'Orleans & Merchandise Mart, cta bus' });
+  await expect(bus.locator('.arrival-time')).toHaveText(['Canceled', 'Skipped']);
+  await expect(page.locator('.map-state')).toHaveCount(0, { timeout: 15_000 });
+  const label = page.getByRole('button', { name: 'Merchandise Mart. Show stop details', exact: true });
+  await expect(label.locator('.map-times > span').last()).toContainText('Scheduled');
+});

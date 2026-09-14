@@ -4,12 +4,13 @@ import { formatEvent } from '../lib/format';
 import { departureGroups, freshnessState, routeColor } from '../lib/presentation';
 import type { TransitEvent } from '../lib/types';
 
-export function ArrivalTime({ event, now, timeFormat }: { event: TransitEvent; now: number; timeFormat: '12h' | '24h' }) {
+export function ArrivalTime({ event, now, timeFormat, showScheduleLabel = false }: { event: TransitEvent; now: number; timeFormat: '12h' | '24h'; showScheduleLabel?: boolean }) {
   const full = formatEvent(event, now, timeFormat);
   const value = full.replace(/^Scheduled\s*[·:]\s*/, '');
   const parts = /^(\d+)\s*min(?:s)?$/i.exec(value);
   return <span aria-label={full} className={`arrival-time ${event.status !== 'normal' ? 'event-exception' : ''}`}>
     {parts ? <><strong>{parts[1]}</strong><span>min</span></> : <strong className="time-word">{value}</strong>}
+    {showScheduleLabel && event.time_basis === 'schedule' && <small>Scheduled</small>}
     {freshnessState(event.freshness, now) === 'stale' && <small>Stale</small>}
   </span>;
 }
@@ -18,6 +19,6 @@ export default function Departures({ events, now, timeFormat, limit = 2 }: { eve
   return <div className="arrival-list">{departureGroups(events, now, limit).map(group => <div className="arrival-row" key={`${group.route}:${group.destination}`}>
     <span className="route-pill" style={{ '--route-color': routeColor(group.route, group.color) } as CSSProperties}>{group.route}</span>
     <div className="arrival-destination"><strong>{group.destination}</strong>{group.events.every(event => event.time_basis === 'schedule') && <small><Clock3 size={12} aria-hidden="true" />Scheduled</small>}</div>
-    <div className="departure-pair">{group.events.map(event => <ArrivalTime key={event.id} event={event} now={now} timeFormat={timeFormat} />)}</div>
+    <div className="departure-pair">{group.events.map(event => <ArrivalTime key={event.id} event={event} now={now} timeFormat={timeFormat} showScheduleLabel={!group.events.every(item => item.time_basis === 'schedule')} />)}</div>
   </div>)}</div>;
 }

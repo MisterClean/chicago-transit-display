@@ -65,8 +65,7 @@ h1, h2, h3 { text-wrap: balance; }
 .card-topline { display: flex; align-items: center; gap: .5rem; justify-content: space-between; margin-bottom: .3rem; }
 .category-label { display: flex; align-items: center; gap: .4rem; color: var(--muted); font-size: var(--text-caption); font-weight: 500; }
 .category-label > svg { width: 14px; height: 14px; }
-.operator-logo { object-fit: contain; flex-shrink: 0; width: 3.2rem; height: 1.4rem; padding: .18rem .25rem; background: #fff; border-radius: 3px; }
-.operator-cta { width: 1.4rem; padding: 0; border-radius: 50%; }
+.operator-label { flex-shrink: 0; color: var(--muted); font-size: var(--text-caption); font-weight: 500; }
 .map-index { font-variant-numeric: tabular-nums; font-size: var(--text-caption); color: var(--muted); }
 .card-heading { display: flex; align-items: baseline; gap: .75rem; justify-content: space-between; }
 .card-heading h3 { font-size: calc(var(--text-heading) * var(--text-scale)); font-weight: 600; line-height: 1.2; letter-spacing: -.025em; overflow-wrap: anywhere; }
@@ -132,7 +131,8 @@ h1, h2, h3 { text-wrap: balance; }
 }
 .setup-panel { overscroll-behavior: contain; }.setup-body { overscroll-behavior: contain; }
 .card-heading { align-items: center; }.card-heading h3 { flex: 1; }.departure-pair { flex-wrap: wrap; justify-content: flex-end; max-width: 52%; }.cards-grid { min-height: 0; }
-.operator-cta { object-fit: cover; object-position: left; background: transparent; }
 .mobility-card { padding-block-start: .5rem; }.card-footer { min-height: 1.25rem; line-height: 1.3; padding-block: .15rem; }.card-subtitle { margin-block: .15rem; }.cards-grid { gap: .5rem; }
 @media (min-width: 960px) and (min-height: 650px) { .app-shell { height: 100dvh; }.neighborhood-map { min-height: 0; } }
 @media (max-width: 540px) { .discovery-search { flex-direction: column; align-items: stretch; }.radius-field { justify-content: space-between; }.radius-field select { flex: 1; }.search-field { width: 100%; } }
+
+.independence-note { display: block; margin-top: .15rem; }.source-links { display: flex; flex-wrap: wrap; gap: .5rem 1rem; }.source-links a { color: inherit; text-decoration: underline; text-underline-offset: .2em; }

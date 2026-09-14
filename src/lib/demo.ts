@@ -1,16 +1,17 @@
 import type { BoardCard, BoardConfig, BoardResponse, Catalog, Freshness, Provider, TransitEvent } from './types';
 import { distanceMeters } from './geo';
+import { routeColor } from './presentation';
 
 export const demoCatalog: Catalog = {
   version: 'demo-1',
   coverage_note: 'Illustrative River North catalog for demo mode. Switch to live data for the server’s current catalog.',
   places: [
-    { id: 'cta:rail_station:40460', provider_id: 'cta_rail', source_id: '40460', kind: 'rail_station', name: 'Merchandise Mart', lat: 41.88897, lon: -87.63392, routes: ['Brown', 'Purple'], color: '#966447' },
+    { id: 'cta:rail_station:40460', provider_id: 'cta_rail', source_id: '40460', kind: 'rail_station', name: 'Merchandise Mart', lat: 41.88897, lon: -87.63392, routes: ['Brown', 'Purple'], color: '#62361b' },
     { id: 'cta:bus_stop:4626', provider_id: 'cta_bus', source_id: '4626', kind: 'bus_stop', name: 'Orleans & Merchandise Mart', lat: 41.888552, lon: -87.636751001, routes: ['37', '125'], direction: 'Northwestbound', color: '#62b4d9' },
     { id: 'metra:metra_station:CUS', provider_id: 'metra', source_id: 'CUS', kind: 'metra_station', name: 'Chicago Union Station', lat: 41.8788889, lon: -87.6388889, routes: ['BNSF', 'MD-N', 'MD-W'], color: '#6586c4' },
     { id: 'divvy:shared_station:a3a5428e-a135-11e9-9cda-0a87ae2ba916', provider_id: 'divvy', source_id: 'a3a5428e-a135-11e9-9cda-0a87ae2ba916', kind: 'shared_station', name: 'Orleans St & Merchandise Mart Plaza', lat: 41.888243, lon: -87.63639, routes: [], color: '#7ccbc0' },
-    { id: 'cta:rail_station:40380', provider_id: 'cta_rail', source_id: '40380', kind: 'rail_station', name: 'Clark/Lake', lat: 41.88574, lon: -87.63089, routes: ['Blue', 'Brown', 'Green', 'Orange', 'Pink', 'Purple'], color: '#328cc8' },
-    { id: 'cta:rail_station:40710', provider_id: 'cta_rail', source_id: '40710', kind: 'rail_station', name: 'Chicago', lat: 41.89681, lon: -87.63592, routes: ['Brown', 'Purple'], color: '#966447' },
+    { id: 'cta:rail_station:40380', provider_id: 'cta_rail', source_id: '40380', kind: 'rail_station', name: 'Clark/Lake', lat: 41.88574, lon: -87.63089, routes: ['Blue', 'Brown', 'Green', 'Orange', 'Pink', 'Purple'], color: '#00a1de' },
+    { id: 'cta:rail_station:40710', provider_id: 'cta_rail', source_id: '40710', kind: 'rail_station', name: 'Chicago', lat: 41.89681, lon: -87.63592, routes: ['Brown', 'Purple'], color: '#62361b' },
   ],
 };
 export const defaultConfig: BoardConfig = {
@@ -42,7 +43,7 @@ export function createDemoBoard(config: BoardConfig, now = new Date()): BoardRes
     const destination = selection.destination || (metra ? 'Aurora' : place.kind === 'bus_stop' ? 'To Fullerton' : route === 'Blue' ? 'O’Hare' : 'Kimball');
     const events: TransitEvent[] = station ? [] : [metra ? 18 : index === 0 ? 3 : 5, metra ? 48 : 11, metra ? 78 : 19, metra ? 108 : 26, metra ? 138 : 33].slice(0, Math.max(2, selection.limit)).map((minutes, n) => ({
       id: `demo-${selection.id}-${n}`, route, destination, expected_at: metra ? null : new Date(+now + minutes * 60000).toISOString(), scheduled_at: metra ? new Date(+now + minutes * 60000).toISOString() : null,
-      time_basis: metra ? 'schedule' : 'prediction', status: 'normal', approaching: false, event_kind: metra ? 'departure' : 'arrival', color: place.color, freshness: fresh(),
+      time_basis: metra ? 'schedule' : 'prediction', status: 'normal', approaching: false, event_kind: metra ? 'departure' : 'arrival', color: place.kind === 'rail_station' ? routeColor(route) : place.color, freshness: fresh(),
     }));
     if (place.kind === 'rail_station' && !selection.destination) {
       events.push(...events.map((event, n) => ({ ...event, id: `${event.id}-opposite`, destination: route === 'Blue' ? 'Forest Park' : 'Loop', expected_at: new Date(+now + (6 + n * 9) * 60000).toISOString() })));

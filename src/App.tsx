@@ -4,7 +4,7 @@ import {
   ChevronRight, CircleHelp, Clock3, Expand, MapPin, Minimize,
   Radio, RefreshCw, Settings2, TriangleAlert, WifiOff, Zap,
 } from 'lucide-react';
-import OperatorLogo from './components/OperatorLogo';
+import OperatorLabel from './components/OperatorLabel';
 import Departures from './components/Departures';
 import { availableVehicles, cardState, departureGroups } from './lib/presentation';
 import MobilityMap from './components/MobilityMap';
@@ -40,7 +40,7 @@ function MobilityCard({ card, config, now, online, mode, onConfigure }: {
   const knownBikeTotal = availability?.classic != null && availability?.electric != null ? availability.classic + availability.electric : null;
 
   return <article className={`mobility-card kind-${card.kind}${stale && !unavailable ? ' is-stale' : ''}`} aria-label={`${card.title}, ${category.toLowerCase()}`}>
-    <div className="card-heading"><OperatorLogo provider={card.provider_id} /><h3>{card.title}</h3>{approxDistance && <span className="card-distance" title="Approximate straight-line distance"><MapPin size={12} />{approxDistance}</span>}</div>
+    <div className="card-heading"><OperatorLabel provider={card.provider_id} /><h3>{card.title}</h3>{approxDistance && <span className="card-distance" title="Approximate straight-line distance"><MapPin size={12} />{approxDistance}</span>}</div>
     <div className="card-subtitle">{card.subtitle || (card.kind === 'vehicles' ? 'Available now, near your location' : 'Upcoming service')}</div>
 
     {unavailable ? <div className="card-empty">
@@ -187,7 +187,7 @@ export default function App() {
       </div>
     </main>
 
-    <footer inert={setupOpen || infoOpen} className="app-footer"><div className="freshness-status" role="status" aria-live="polite"><span className={`status-dot ${!online || error ? 'amber' : mode === 'demo' ? 'amber' : 'green'}`} />{connectionText}</div><div className="footer-center">{mode === 'demo' ? 'Sample arrivals & availability · not for trip planning' : 'Times are estimates. Check the operator for service changes.'}</div><div className="footer-actions"><button onClick={refresh} aria-label="Refresh board" className={`refresh-button${loading ? ' is-refreshing' : ''}`} disabled={loading || !online}><RefreshCw size={12} /><span>{loading ? 'Refreshing' : board ? `Updated ${refreshAge < 5 ? 'just now' : `${refreshAge}s ago`}` : 'Refresh'}</span></button><button className="attribution-button" onClick={() => { modalTrigger.current = document.activeElement as HTMLElement; setInfoOpen(true); }} aria-label="Data sources and about"><CircleHelp size={13} /><span>Sources & about</span></button></div></footer>
+    <footer inert={setupOpen || infoOpen} className="app-footer"><div className="freshness-status" role="status" aria-live="polite"><span className={`status-dot ${!online || error ? 'amber' : mode === 'demo' ? 'amber' : 'green'}`} />{connectionText}</div><div className="footer-center">{mode === 'demo' ? 'Sample arrivals & availability · not for trip planning' : 'Times are estimates. Check the operator for service changes.'}<span className="independence-note">Independent app · not made or endorsed by CTA.</span></div><div className="footer-actions"><button onClick={refresh} aria-label="Refresh board" className={`refresh-button${loading ? ' is-refreshing' : ''}`} disabled={loading || !online}><RefreshCw size={12} /><span>{loading ? 'Refreshing' : board ? `Updated ${refreshAge < 5 ? 'just now' : `${refreshAge}s ago`}` : 'Refresh'}</span></button><button className="attribution-button" onClick={() => { modalTrigger.current = document.activeElement as HTMLElement; setInfoOpen(true); }} aria-label="Data sources and about"><CircleHelp size={13} /><span>Sources & about</span></button></div></footer>
 
     {setupOpen && <SetupPanel config={config} setConfig={setConfig} catalog={catalog} providers={providers} mode={mode} setMode={setMode} onClose={closeSetup} onDisplay={() => void toggleKiosk()} />}
     {infoOpen && <AboutDialog onClose={closeAbout} attributions={board?.attributions ?? []} mode={mode} />}
@@ -197,12 +197,21 @@ export default function App() {
 
 function AboutDialog({ onClose, attributions, mode }: { onClose: () => void; attributions: string[]; mode: 'demo' | 'live' }) {
   const closeRef = useRef<HTMLButtonElement>(null);
+  const dialogRef = useRef<HTMLElement>(null);
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null;
     closeRef.current?.focus();
-    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose(); if (event.key === 'Tab') { event.preventDefault(); closeRef.current?.focus(); } };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+      if (event.key !== 'Tab') return;
+      const controls = dialogRef.current?.querySelectorAll<HTMLElement>('a[href], button');
+      if (!controls?.length) return;
+      const first = controls[0], last = controls[controls.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    };
     document.addEventListener('keydown', onKey);
     return () => { document.removeEventListener('keydown', onKey); previous?.focus(); };
   }, [onClose]);
-  return <div className="dialog-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) onClose(); }}><section className="about-dialog" role="dialog" aria-modal="true" aria-labelledby="about-title"><span className="dialog-eyebrow">Data sources</span><h2 id="about-title">Chicago transit display</h2><p>An open-source neighborhood mobility board for Chicago. No account required. Your configuration stays in this browser.</p>{mode === 'demo' && <div className="notice-box"><TriangleAlert size={18} /><span>You’re viewing a demonstration. All arrivals and vehicle availability on this board are sample data.</span></div>}<h3>Data & mapping</h3><p>{attributions.length ? attributions.join(' · ') : 'CTA transit data and Divvy shared mobility, when connected. Protomaps cartography with OpenStreetMap contributors.'}</p><p>Not affiliated with or endorsed by CTA, Metra, Divvy, or the City of Chicago. Provider data and map tiles remain subject to their own terms. Metra and restricted scooter providers require further integration before live service.</p><button ref={closeRef} className="primary-button" onClick={onClose}>Back to the board <ArrowRight size={17} /></button></section></div>;
+  return <div className="dialog-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) onClose(); }}><section ref={dialogRef} className="about-dialog" role="dialog" aria-modal="true" aria-labelledby="about-title"><span className="dialog-eyebrow">Data sources</span><h2 id="about-title">Chicago transit display</h2><p>An open-source neighborhood mobility board for Chicago. No account required. Your configuration stays in this browser. This app is not made or endorsed by CTA.</p>{mode === 'demo' && <div className="notice-box"><TriangleAlert size={18} /><span>You’re viewing a demonstration. All arrivals and vehicle availability on this board are sample data.</span></div>}<h3>Data & mapping</h3><p>Data provided by Chicago Transit Authority. CTA stop locations and route paths are included; live arrivals use CTA Bus Tracker and CTA Train Tracker when connected. Demo arrivals are illustrative.</p><p>{attributions.length ? attributions.join(' · ') : 'CTA transit data and Divvy shared mobility, when connected. Protomaps cartography with OpenStreetMap contributors.'}</p><p>Not affiliated with or endorsed by CTA, Metra, Divvy, or the City of Chicago. Provider data and map tiles remain subject to their own terms. Metra and restricted scooter providers require further integration before live service.</p><p className="source-links"><a href="https://www.transitchicago.com/developers/terms/" target="_blank" rel="noreferrer">CTA data terms</a><a href="https://www.transitchicago.com/developers/branding/" target="_blank" rel="noreferrer">CTA branding guidelines</a><a href="https://www.transitchicago.com/alerts/" target="_blank" rel="noreferrer">CTA service alerts</a></p><button ref={closeRef} className="primary-button" onClick={onClose}>Back to the board <ArrowRight size={17} /></button></section></div>;
 }

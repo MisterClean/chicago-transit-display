@@ -148,13 +148,33 @@ pub fn parse_bus(
         let Some(snapshot) = result.get_mut(&stop_id) else {
             continue;
         };
+        // Bus Tracker v3 Dynamic Action Types (guide p.47). Never expose
+        // invalidated trips or present a canceled/drop-off-only event as a pickup.
+        let action = integer(&record["dyn"]).ok_or_else(FeedError::invalid)?;
+        if matches!(action, 16 | 17) {
+            continue;
+        }
         let source = observed(&record["tmstmp"], now).ok_or_else(FeedError::invalid)?;
         let arrival = cta_arrival(&record["prdtm"], source).ok_or_else(FeedError::invalid)?;
         if arrival > now + Duration::hours(3) {
             return Err(FeedError::invalid());
         }
         let delayed = flag(&record["dly"]).ok_or_else(FeedError::invalid)?;
-        if arrival < now - Duration::seconds(60) && !delayed {
+        let status = match action {
+            1 | 18 => "canceled",
+            4 => "skipped",
+            14 | 15 => "delayed",
+            // Action 12's cancellation must not be disclosed to the public.
+            0 | 2 | 3 | 6 | 8 | 9 | 10 | 12 | 13 | 19 => {
+                if delayed {
+                    "delayed"
+                } else {
+                    "normal"
+                }
+            }
+            _ => return Err(FeedError::invalid()),
+        };
+        if arrival < now - Duration::seconds(60) && status != "delayed" {
             continue;
         }
         let event_kind = match record["typ"].as_str() {
@@ -172,8 +192,8 @@ pub fn parse_bus(
             expected_at: Some(arrival),
             scheduled_at: None,
             time_basis: "prediction".into(),
-            status: if delayed { "delayed" } else { "normal" }.into(),
-            approaching: record["prdctdn"].as_str() == Some("DUE"),
+            status: status.into(),
+            approaching: status == "normal" && record["prdctdn"].as_str() == Some("DUE"),
             event_kind: event_kind.into(),
             color: None,
             freshness: freshness.clone(),
