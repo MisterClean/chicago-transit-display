@@ -4,9 +4,12 @@ import { createHash } from 'node:crypto';
 const files = (await readdir('dist/assets')).map(name => `/assets/${name}`);
 const fontFiles = await readdir('dist/fonts').then(names => names.map(name => `/fonts/${name}`)).catch(error => { if (error.code === 'ENOENT') return []; throw error; });
 const shell = await readFile('dist/index.html', 'utf8');
-const revision = createHash('sha256').update(shell).digest('hex').slice(0, 12);
-const assets = ['/index.html', '/favicon.svg', ...files, ...fontFiles, '/data/transit-routes.geojson'];
-await writeFile('dist/sw.js', `// Generated for this exact build. Never caches provider data, board queries, or map tiles.
+const assets = ['/index.html', '/favicon.svg', ...files, ...fontFiles, '/data-notices.html', '/data/transit-routes.geojson'];
+// Data-only refreshes must install a new cache even if the JS and HTML are unchanged.
+const hash = createHash('sha256').update(shell);
+for (const path of [...assets].sort()) hash.update(path).update(await readFile(`dist${path}`));
+const revision = hash.digest('hex').slice(0, 12);
+await writeFile('dist/sw.js', `// Generated for this exact build. Caches dated static route data; never live feeds, board queries, or map tiles.
 const CACHE = 'near-next-${revision}';
 const ASSETS = ${JSON.stringify(assets)};
 self.addEventListener('install', event => {

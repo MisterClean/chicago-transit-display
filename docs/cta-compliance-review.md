@@ -2,7 +2,7 @@
 
 Reviewed September 14, 2026 against CTA's [branding guidelines](https://www.transitchicago.com/developers/branding/), [Developer License Agreement](https://www.transitchicago.com/developers/terms/), and bus/train API references.
 
-**Ready to apply from a repository branding perspective.** The prohibited agency logo has been removed from the current app and distributed assets. No other naming or branding conflict was found in this working tree. This review does not establish CTA approval or authenticated live-feed behavior. Use **Chicago transit display** as the application name.
+**Ready to apply from a CTA branding perspective only.** The [all-provider launch review](mobility-compliance-review.md) supersedes any broader launch inference and records unresolved provider permissions. The prohibited agency logo has been removed from the current app and distributed assets. No other naming or branding conflict was found in this working tree. This review does not establish CTA approval or authenticated live-feed behavior. Use **Chicago transit display** as the application name.
 
 ## Branding and license findings
 

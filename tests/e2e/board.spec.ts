@@ -21,6 +21,9 @@ test('demo is explicit, accessible, and opens its sources dialog by keyboard', a
   await page.keyboard.press('Enter');
   await expect(page.getByRole('dialog')).toBeVisible();
   await expect(page.getByText(/All arrivals and vehicle availability on this board are sample data/)).toBeVisible();
+  await expect(page.getByRole('dialog').getByText(/This site provides applications using data that has been modified/)).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Metra static data license' })).toHaveAttribute('href', /gtfs_license_agreement\.pdf$/);
+  await expect(page.getByRole('link', { name: 'Divvy published data license' })).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Data sources and about' })).toBeFocused();

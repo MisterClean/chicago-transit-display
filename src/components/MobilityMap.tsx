@@ -8,12 +8,14 @@ import { formatEvent } from '../lib/format';
 import { placeMapLabels } from '../lib/map-layout';
 import { loadRoutes, type RouteCollection } from '../lib/routes';
 import OperatorLabel from './OperatorLabel';
+import { metraDisclaimer, stationDataDate } from '../lib/data-notices';
 import './MobilityMap.css';
 
 type Props = {
   origin: Origin; places: Place[]; vehicles?: Vehicle[]; cards?: BoardCard[];
   interactive?: boolean; onOriginChange?: (origin: Origin) => void; theme?: 'dark' | 'light';
   now?: number; online?: boolean; mode?: 'demo' | 'live'; timeFormat?: '12h' | '24h';
+  catalogVersion?: string;
 };
 const layerNames = { bus: 'CTA bus', rail: 'CTA rail', metra: 'Metra' } as const;
 
@@ -32,7 +34,7 @@ function MapCardInfo({ card, now, online, timeFormat }: { card: BoardCard; now: 
   </span>) : <span className="map-data-status">No predictions available</span>}{state === 'stale' && <span className="map-data-status">{online ? 'Stale predictions' : 'Offline · last known predictions'}</span>}</>;
 }
 
-export default function MobilityMap({ origin, places, vehicles = [], cards = [], interactive = false, onOriginChange, theme = 'dark', now = Date.now(), online = true, mode = 'live', timeFormat = '12h' }: Props) {
+export default function MobilityMap({ origin, places, vehicles = [], cards = [], interactive = false, onOriginChange, theme = 'dark', now = Date.now(), online = true, mode = 'live', timeFormat = '12h', catalogVersion = '' }: Props) {
   const container = useRef<HTMLDivElement>(null);
   const map = useRef<LibreMap | null>(null);
   const onChange = useRef(onOriginChange); onChange.current = onOriginChange;
@@ -89,6 +91,8 @@ export default function MobilityMap({ origin, places, vehicles = [], cards = [],
         libre.setWorkerUrl(mapWorkerUrl);
         const instance = new libre.Map({ container: container.current, style: customStyle || `https://api.protomaps.com/styles/v5/${theme}/en.json?key=${encodeURIComponent(key!)}`, center: [originRef.current.lon, originRef.current.lat], zoom: 14.4, minZoom: 9, maxZoom: 18, interactive, attributionControl: false, renderWorldCopies: false });
         map.current = instance;
+        // Custom styles can carry other providers' required credits in their sources.
+        if (customStyle) instance.addControl(new libre.AttributionControl({ compact: false }), 'bottom-right');
         const update = () => { cancelAnimationFrame(frame); frame = requestAnimationFrame(() => { if (!disposed) setView(v => v + 1); }); };
         instance.on('move', update);
         instance.on('resize', update);
@@ -182,6 +186,6 @@ export default function MobilityMap({ origin, places, vehicles = [], cards = [],
       {!editing && <div className="map-bottom-note">{routesError ? <><span>Route lines unavailable</span><button onClick={() => setAttempt(v => v + 1)}>Retry</button></> : <span>Route paths{routes ? ` · ${new Date(routes.imported_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` : ' loading…'} · may exclude detours</span>}</div>}
     </>}
     {status !== 'ready' && <div className="map-state" role="status"><LocateFixed size={30} /><strong>{status === 'loading' ? 'Loading map…' : 'Map unavailable'}</strong><p>{status === 'loading' ? 'Loading streets and transit routes.' : 'Use the mobility list for stops, arrivals, and bike availability.'}</p>{status === 'unavailable' && (key || customStyle) && <button type="button" className="map-retry" onClick={() => setAttempt(value => value + 1)}>Retry map</button>}</div>}
-    <div className="map-attribution"><a href="https://protomaps.com" target="_blank" rel="noreferrer">Protomaps</a><span>· ©</span><a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a><span>· CTA · Metra</span></div>
+    <div className="map-attribution">{!customStyle && <><a href="https://protomaps.com" target="_blank" rel="noreferrer">Protomaps</a><span>· ©</span><a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a><span>·</span><a href="/data-notices.html#map-credits" target="_blank" rel="noreferrer">Map credits</a><span>· </span></>}<span>CTA</span><span className="metra-map-notice">{metraDisclaimer}{routes && ` Routes updated ${routes.imported_at.slice(0, 10)}.`}{places.some(place => place.provider_id === 'metra') && ` Stations: ${mode === 'demo' ? 'sample data' : stationDataDate(catalogVersion)}.`}</span></div>
   </div>;
 }

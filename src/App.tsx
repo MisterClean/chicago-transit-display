@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import OperatorLabel from './components/OperatorLabel';
 import Departures from './components/Departures';
+import { chicagoDataDisclaimer, metraDisclaimer, stationDataDate } from './lib/data-notices';
 import { availableVehicles, cardState, departureGroups } from './lib/presentation';
 import MobilityMap from './components/MobilityMap';
 import SetupPanel from './components/SetupPanel';
@@ -183,24 +184,23 @@ export default function App() {
           {totalPages > 1 && <nav className="board-pagination" aria-label="Board pages"><span>Mobility options</span><div><button aria-label="Previous board page" onClick={() => setPage((safePage - 1 + totalPages) % totalPages)}><ChevronLeft size={16} /></button>{Array.from({ length: totalPages }, (_, index) => <button key={index} className={`page-dot${safePage === index ? ' active' : ''}`} aria-label={`Board page ${index + 1}`} aria-current={safePage === index ? 'page' : undefined} onClick={() => setPage(index)} />)}<button aria-label="Next board page" onClick={() => setPage((safePage + 1) % totalPages)}><ChevronRight size={16} /></button></div><span>{safePage + 1} / {totalPages}</span><button className="rotation-button" aria-pressed={rotating} onClick={() => setRotating(value => !value)}>{rotating ? <Pause size={14} /> : <Play size={14} />}{rotating ? 'Pause rotation' : 'Auto-rotate'}</button></nav>}
         </section>
 
-        {config.preferences.show_map && <aside className="map-section" aria-label="Map of selected stops and vehicles"><div className="section-heading"><h2>Map</h2><span className="section-caption">Stops, bikes, and routes</span></div><div className="neighborhood-map"><MobilityMap origin={config.origin} places={places} vehicles={vehicles} cards={cards} now={now} online={online} mode={mode} timeFormat={config.preferences.time_format} theme={config.preferences.theme} interactive /></div></aside>}
+        {config.preferences.show_map && <aside className="map-section" aria-label="Map of selected stops and vehicles"><div className="section-heading"><h2>Map</h2><span className="section-caption">Stops, bikes, and routes</span></div><div className="neighborhood-map"><MobilityMap catalogVersion={catalog.version} origin={config.origin} places={places} vehicles={vehicles} cards={cards} now={now} online={online} mode={mode} timeFormat={config.preferences.time_format} theme={config.preferences.theme} interactive /></div></aside>}
       </div>
     </main>
 
-    <footer inert={setupOpen || infoOpen} className="app-footer"><div className="freshness-status" role="status" aria-live="polite"><span className={`status-dot ${!online || error ? 'amber' : mode === 'demo' ? 'amber' : 'green'}`} />{connectionText}</div><div className="footer-center">{mode === 'demo' ? 'Sample arrivals & availability · not for trip planning' : 'Times are estimates. Check the operator for service changes.'}<span className="independence-note">Independent app · not made or endorsed by CTA.</span></div><div className="footer-actions"><button onClick={refresh} aria-label="Refresh board" className={`refresh-button${loading ? ' is-refreshing' : ''}`} disabled={loading || !online}><RefreshCw size={12} /><span>{loading ? 'Refreshing' : board ? `Updated ${refreshAge < 5 ? 'just now' : `${refreshAge}s ago`}` : 'Refresh'}</span></button><button className="attribution-button" onClick={() => { modalTrigger.current = document.activeElement as HTMLElement; setInfoOpen(true); }} aria-label="Data sources and about"><CircleHelp size={13} /><span>Sources & about</span></button></div></footer>
+    <footer inert={setupOpen || infoOpen} className="app-footer"><div className="freshness-status" role="status" aria-live="polite"><span className={`status-dot ${!online || error ? 'amber' : mode === 'demo' ? 'amber' : 'green'}`} />{connectionText}</div><div className="footer-center">{mode === 'demo' ? 'Sample arrivals & availability · not for trip planning' : 'Times are estimates. Check the operator for service changes.'}<span className="independence-note">Independent app · not made or endorsed by CTA.</span>{board?.cards.some(card => card.provider_id === 'metra') && <span className="independence-note">{metraDisclaimer} Stations: {mode === 'demo' ? 'sample data' : stationDataDate(catalog.version)}.</span>}</div><div className="footer-actions"><button onClick={refresh} aria-label="Refresh board" className={`refresh-button${loading ? ' is-refreshing' : ''}`} disabled={loading || !online}><RefreshCw size={12} /><span>{loading ? 'Refreshing' : board ? `Updated ${refreshAge < 5 ? 'just now' : `${refreshAge}s ago`}` : 'Refresh'}</span></button><button className="attribution-button" onClick={() => { modalTrigger.current = document.activeElement as HTMLElement; setInfoOpen(true); }} aria-label="Data sources and about"><CircleHelp size={13} /><span>Sources & about</span></button></div></footer>
 
     {setupOpen && <SetupPanel config={config} setConfig={setConfig} catalog={catalog} providers={providers} mode={mode} setMode={setMode} onClose={closeSetup} onDisplay={() => void toggleKiosk()} />}
-    {infoOpen && <AboutDialog onClose={closeAbout} attributions={board?.attributions ?? []} mode={mode} />}
+    {infoOpen && <AboutDialog catalogVersion={catalog.version} onClose={closeAbout} attributions={board?.attributions ?? []} mode={mode} />}
     {notice && <div className="toast" role="status"><Check size={18} />{notice}</div>}
   </div>;
 }
 
-function AboutDialog({ onClose, attributions, mode }: { onClose: () => void; attributions: string[]; mode: 'demo' | 'live' }) {
-  const closeRef = useRef<HTMLButtonElement>(null);
+function AboutDialog({ onClose, attributions, mode, catalogVersion }: { catalogVersion: string; onClose: () => void; attributions: string[]; mode: 'demo' | 'live' }) {
   const dialogRef = useRef<HTMLElement>(null);
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null;
-    closeRef.current?.focus();
+    dialogRef.current?.focus();
     const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') onClose();
       if (event.key !== 'Tab') return;
@@ -213,5 +213,32 @@ function AboutDialog({ onClose, attributions, mode }: { onClose: () => void; att
     document.addEventListener('keydown', onKey);
     return () => { document.removeEventListener('keydown', onKey); previous?.focus(); };
   }, [onClose]);
-  return <div className="dialog-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) onClose(); }}><section ref={dialogRef} className="about-dialog" role="dialog" aria-modal="true" aria-labelledby="about-title"><span className="dialog-eyebrow">Data sources</span><h2 id="about-title">Chicago transit display</h2><p>An open-source neighborhood mobility board for Chicago. No account required. Your configuration stays in this browser. This app is not made or endorsed by CTA.</p>{mode === 'demo' && <div className="notice-box"><TriangleAlert size={18} /><span>You’re viewing a demonstration. All arrivals and vehicle availability on this board are sample data.</span></div>}<h3>Data & mapping</h3><p>Data provided by Chicago Transit Authority. CTA stop locations and route paths are included; live arrivals use CTA Bus Tracker and CTA Train Tracker when connected. Demo arrivals are illustrative.</p><p>{attributions.length ? attributions.join(' · ') : 'CTA transit data and Divvy shared mobility, when connected. Protomaps cartography with OpenStreetMap contributors.'}</p><p>Not affiliated with or endorsed by CTA, Metra, Divvy, or the City of Chicago. Provider data and map tiles remain subject to their own terms. Metra and restricted scooter providers require further integration before live service.</p><p className="source-links"><a href="https://www.transitchicago.com/developers/terms/" target="_blank" rel="noreferrer">CTA data terms</a><a href="https://www.transitchicago.com/developers/branding/" target="_blank" rel="noreferrer">CTA branding guidelines</a><a href="https://www.transitchicago.com/alerts/" target="_blank" rel="noreferrer">CTA service alerts</a></p><button ref={closeRef} className="primary-button" onClick={onClose}>Back to the board <ArrowRight size={17} /></button></section></div>;
+  return <div className="dialog-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) onClose(); }}>
+    <section ref={dialogRef} tabIndex={-1} className="about-dialog" role="dialog" aria-modal="true" aria-labelledby="about-title">
+      <span className="dialog-eyebrow">Data sources</span><h2 id="about-title">Chicago transit display</h2>
+      <p>An open-source neighborhood mobility board for Chicago. No account required. Your saved configuration stays in this browser. This app is not made or endorsed by CTA.</p>
+      {mode === 'demo' && <div className="notice-box"><TriangleAlert size={18} /><span>You’re viewing a demonstration. All arrivals and vehicle availability on this board are sample data.</span></div>}
+      <h3>Data & mapping</h3>
+      <p>Data provided by Chicago Transit Authority. CTA stop locations and route paths are included; live arrivals use CTA Bus Tracker and CTA Train Tracker when connected. Times and availability are estimates; check the operator before travel.</p>
+      <p>{metraDisclaimer} {mode === 'demo' ? 'Demo stations and departures are illustrative.' : `Station data updated ${stationDataDate(catalogVersion)}.`} Metra route paths show their separate update date on the map. Live Metra departures are not connected.</p>
+      {attributions.length > 0 && <p>{attributions.join(' · ')}</p>}
+      <p>Divvy availability comes from its public GBFS feed when connected. This app is not affiliated with or endorsed by Divvy, Lyft, or the City of Chicago. Provider data and map tiles retain their own licenses.</p>
+      <p className="source-links">
+        <a href="https://www.transitchicago.com/developers/terms/" target="_blank" rel="noreferrer">CTA data terms</a>
+        <a href="https://www.transitchicago.com/developers/branding/" target="_blank" rel="noreferrer">CTA branding guidelines</a>
+        <a href="https://www.transitchicago.com/alerts/" target="_blank" rel="noreferrer">CTA service alerts</a>
+        <a href="https://metra.com/sites/default/files/assets/developers/gtfs_license_agreement.pdf" target="_blank" rel="noreferrer">Metra static data license</a>
+        <a href="https://divvybikes.com/data-license-agreement" target="_blank" rel="noreferrer">Divvy published data license</a>
+        <a href="https://protomaps.com/api#usage-policy" target="_blank" rel="noreferrer">Protomaps API policy</a>
+        <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap contributors · ODbL</a>
+      </p>
+      <h3>Chicago data notice</h3><p>{chicagoDataDisclaimer}</p>
+      <p className="source-links"><a href="https://www.chicago.gov/city/en/narr/foia/data_disclaimer.html" target="_blank" rel="noreferrer">City of Chicago data terms</a><a href="/data-notices.html" target="_blank" rel="noreferrer">Data notices</a></p>
+      <h3>Your location & privacy</h3>
+      <p>The app has no accounts or analytics. Your browser stores your board settings. Shared links include coordinates and selected stops; anyone with the link can learn the location. Exported settings also include your display label.</p>
+      <p>GPS is requested only when you choose “Use my location.” Nearby vehicle searches send your chosen coordinates to this app’s server. Map requests send the viewed area and your IP address to the map provider. Address search sends the text you submit through this app’s server to Geocodio, when configured. The app does not keep address or vehicle location histories.</p>
+      <p className="source-links"><a href="https://www.geocod.io/terms-of-use" target="_blank" rel="noreferrer">Geocodio terms</a><a href="https://www.geocod.io/data-sources" target="_blank" rel="noreferrer">Geocodio data sources</a><a href="https://www.geocod.io/gdpr" target="_blank" rel="noreferrer">Geocodio privacy</a><a href="https://protomaps.com/legal" target="_blank" rel="noreferrer">Protomaps terms</a></p>
+      <button className="primary-button" onClick={onClose}>Back to the board <ArrowRight size={17} /></button>
+    </section>
+  </div>;
 }

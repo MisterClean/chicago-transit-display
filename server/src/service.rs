@@ -32,8 +32,8 @@ impl Settings {
         [
             ("cta_bus", "CTA Bus", self.bus_key.is_some(), "Add a CTA Bus Tracker key to connect live predictions.", "Data provided by Chicago Transit Authority", cta_terms),
             ("cta_rail", "CTA Rail", self.rail_key.is_some(), "Add a CTA Train Tracker key to connect live predictions.", "Data provided by Chicago Transit Authority", cta_terms),
-            ("metra", "Metra", false, "Station locations available. Timetables and real-time service are not connected in this MVP.", "Metra station locations. This app is not affiliated with or endorsed by Metra.", "https://metra.com/gtfs-realtime-api-key-request-license-agreement"),
-            ("divvy", "Divvy", self.divvy_enabled, "Optional GBFS integration. Set DIVVY_ENABLED=true after reviewing the provider's applicable data terms.", "Divvy availability data provided by Lyft / Divvy", "https://divvybikes.com/data-license-agreement"),
+            ("metra", "Metra", false, "Station locations available. Timetables and real-time service are not connected in this MVP.", "Metra station locations. Not sponsored or operated by Metra.", "https://metra.com/sites/default/files/assets/developers/gtfs_license_agreement.pdf"),
+            ("divvy", "Divvy", self.divvy_enabled, "Optional GBFS integration. Public launch requires confirmed live-data rights and any required written name/mark permission; see docs/mobility-compliance-review.md.", "Divvy availability data provided by Lyft / Divvy", "https://divvybikes.com/data-license-agreement"),
             ("lime", "Lime", false, "Disabled pending display and aggregation permission.", "Lime integration is not enabled", "https://www.li.me/legal/public-gbfs-terms"),
             ("spin", "Spin", false, "Disabled pending access, current service, and terms verification.", "Spin integration is not enabled", "https://www.spin.app/")
         ].into_iter().map(|(id, name, enabled, pending, attribution, terms)| Provider {
@@ -392,6 +392,10 @@ impl AppState {
             attributions: vec![
                 "Data provided by Chicago Transit Authority".into(),
                 "This independent app is not affiliated with CTA, Metra or Divvy.".into(),
+                format!(
+                    "Not sponsored or operated by Metra. Station snapshot: {}.",
+                    cache.catalog.version
+                ),
             ],
             providers,
         }

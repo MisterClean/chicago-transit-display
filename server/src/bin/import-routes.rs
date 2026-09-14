@@ -206,7 +206,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     if all.len() < 100 {
         return Err("Incomplete route import".into());
     }
-    let result = json!({"type":"FeatureCollection", "imported_at":chrono::Utc::now().to_rfc3339(), "sources":sources.iter().map(|(agency,url)| json!({"agency":agency,"url":url})).collect::<Vec<_>>(), "note":"Static route geometry; includes service variants. Not a live service or detour map.", "features":all});
+    let result = json!({"type":"FeatureCollection", "imported_at":chrono::Utc::now().to_rfc3339(), "sources":sources.iter().map(|(agency,url)| json!({"agency":agency,"url":url})).collect::<Vec<_>>(), "note":"Static route geometry; includes service variants. Not a live service or detour map. Not sponsored or operated by Metra. Data snapshot updated on imported_at.", "features":all});
     std::fs::create_dir_all(output.parent().ok_or("Invalid output path")?)?;
     let temp = output.with_extension("tmp");
     std::fs::write(&temp, serde_json::to_vec(&result)?)?;

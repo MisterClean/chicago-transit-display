@@ -2,7 +2,7 @@
 
 An account-free Chicago neighborhood mobility board for a lobby, kitchen, or spare screen. Built with React, TypeScript, Protomaps/MapLibre, and a small Rust/Axum service.
 
-An independent app, not made or endorsed by CTA. See the [CTA developer review and API application description](docs/cta-compliance-review.md) before enabling live CTA feeds.
+An independent app, not made or endorsed by CTA. See the [launch compliance review](docs/mobility-compliance-review.md) before enabling providers or publishing. Public launch is not yet cleared; Divvy permissions and provider account conditions remain open.
 
 **MVP:** local configuration, nearby stop discovery, transit arrivals, Divvy station availability and nearby e-bikes, shareable display links, and fullscreen display mode. New displays start in live mode. Live mode never substitutes sample arrivals for unavailable data; an explicitly selected demo remains available for previews.
 
@@ -28,7 +28,7 @@ cp server/.env.example server/.env
 npm run dev:server
 ```
 
-Set `DIVVY_ENABLED=true` in `server/.env` for real station counts and undocked bikes; this public feed needs no API key. Allow up to 60 seconds for the first live observations. CTA bus and train predictions need separate `CTA_BUS_API_KEY` and `CTA_TRAIN_API_KEY` values in the same file, followed by a backend restart. Missing providers stay marked **Not connected**. Metra departures are not yet implemented.
+After establishing applicable live-feed rights and required written name/mark permission, set `DIVVY_ENABLED=true` in `server/.env` for station counts and undocked bikes. An API key is not required, but public availability does not establish launch permission. Allow up to 60 seconds for the first live observations. CTA bus and train predictions need separate `CTA_BUS_API_KEY` and `CTA_TRAIN_API_KEY` values in the same file, followed by a backend restart. Missing providers stay marked **Not connected**. Metra departures are not yet implemented.
 
 Use **Customize** to choose from the live catalog. If this browser previously selected a demo, change the header to **Live board** once. The backend starts with no paid provider requests enabled. See [server setup and provider configuration](server/README.md).
 
@@ -114,3 +114,9 @@ cargo run --manifest-path server/Cargo.toml --bin import-routes -- public/data/t
 ```
 
 Arrival limits now apply per route/destination; the API retains at least two per group for map labels, capped at 100 events per card. Existing configuration and shared links remain compatible. Legacy browser-storage keys are retained so saved displays are not reset.
+
+## City of Chicago data notice
+
+This site provides applications using data that has been modified for use from its original source, www.cityofchicago.org, the official website of the City of Chicago. The City of Chicago makes no claims as to the content, accuracy, timeliness, or completeness of any of the data provided at this site. The data provided at this site is subject to change at any time. It is understood that the data provided at this site is being used at one’s own risk.
+
+[City of Chicago data terms](https://www.chicago.gov/city/en/narr/foia/data_disclaimer.html). The [app notice](public/data-notices.html) must accompany application access/download surfaces.

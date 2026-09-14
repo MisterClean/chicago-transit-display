@@ -5,6 +5,7 @@ import {
   SlidersHorizontal, TrainFront, TramFront, Trash2, TriangleAlert, X, Zap,
 } from 'lucide-react';
 import MobilityMap from './MobilityMap';
+import { metraDisclaimer, stationDataDate } from '../lib/data-notices';
 import { exportConfig, importConfig, displayLink, resetConfig } from '../lib/config';
 import { distanceMeters, formatDistance } from '../lib/format';
 import type { BoardConfig, Catalog, GeocodeResponse, Place, PlaceKind, Provider } from '../lib/types';
@@ -79,7 +80,7 @@ export default function SetupPanel({ config, setConfig, catalog, providers, mode
         setTab(tabs[nextIndex].id); document.getElementById(`tab-${tabs[nextIndex].id}`)?.focus();
       }}><item.icon size={16} />{item.label}</button>)}</div>
       <div className="setup-body" role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`}>
-        {tab === 'location' && <LocationSettings config={config} setConfig={setConfig} catalog={catalog} announce={announce} />}
+        {tab === 'location' && <LocationSettings mode={mode} config={config} setConfig={setConfig} catalog={catalog} announce={announce} />}
         {tab === 'connections' && <ConnectionsSettings config={config} setConfig={setConfig} catalog={catalog} providers={providers} mode={mode} announce={announce} />}
         {tab === 'display' && <DisplaySettings config={config} setConfig={setConfig} mode={mode} setMode={setMode} />}
         {tab === 'save' && <SaveSettings config={config} setConfig={setConfig} mode={mode} announce={announce} />}
@@ -93,7 +94,7 @@ export default function SetupPanel({ config, setConfig, catalog, providers, mode
 type SettingsProps = Pick<Props, 'config' | 'setConfig'>;
 type Announce = (message: string, isError?: boolean) => void;
 
-function LocationSettings({ config, setConfig, catalog, announce }: SettingsProps & { catalog: Catalog; announce: Announce }) {
+function LocationSettings({ config, setConfig, catalog, announce, mode }: SettingsProps & { catalog: Catalog; announce: Announce; mode: 'demo' | 'live' }) {
   const [address, setAddress] = useState('');
   const [draft, setDraft] = useState(config.origin);
   const [latitude, setLatitude] = useState(config.origin.lat.toFixed(6));
@@ -161,10 +162,10 @@ function LocationSettings({ config, setConfig, catalog, announce }: SettingsProp
   }
   return <div className="settings-stack">
     <div className="settings-intro"><h3>Board location</h3><p>Set one entrance for distances and nearby vehicles. Use the map or enter coordinates.</p></div>
-    <form onSubmit={event => void searchAddress(event)} className="address-form"><label htmlFor="board-address">Find a Chicago address</label><div className="input-action"><span className="input-icon"><Search size={18} /></span><input id="board-address" value={address} onChange={event => setAddress(event.target.value)} placeholder="Street address, Chicago, IL" maxLength={200} /><button className="primary-button" type="submit" disabled={searching || !address.trim()}>{searching ? 'Searching…' : 'Find address'}</button></div><p className="field-hint">Searching sends only the address you submit to the configured geocoding provider.</p></form>
+    <form onSubmit={event => void searchAddress(event)} className="address-form"><label htmlFor="board-address">Find a Chicago address</label><div className="input-action"><span className="input-icon"><Search size={18} /></span><input id="board-address" value={address} onChange={event => setAddress(event.target.value)} placeholder="Street address, Chicago, IL" maxLength={200} /><button className="primary-button" type="submit" disabled={searching || !address.trim()}>{searching ? 'Searching…' : 'Find address'}</button></div><p className="field-hint">Searching sends the address you submit to Geocodio when connected. Enter an address only, without names or other personal details.</p></form>
     {candidates.length > 0 && <div className="address-candidates" aria-label="Address results">{candidates.map((candidate, index) => <button key={`${candidate.lat}-${candidate.lon}-${index}`} onClick={() => { setDraftOrigin(candidate); setCandidates([]); }}><MapPin size={17} /><span>{candidate.label}</span><ChevronRight size={17} /></button>)}</div>}
     <div className="location-alternatives"><button className="secondary-button" onClick={useLocation} disabled={locating}><LocateFixed size={17} />{locating ? 'Finding your location…' : 'Use my location'}</button><span>No ongoing location tracking</span></div>
-    <div className="setup-map"><MobilityMap origin={draft} places={catalog.places.filter(place => distanceMeters(draft, place) <= 1000).slice(0, 40)} interactive onOriginChange={setDraftOrigin} theme={config.preferences.theme} /><div className="setup-map-help"><MapPin size={15} />Click the map to move your entrance pin</div></div>
+    <div className="setup-map"><MobilityMap mode={mode} catalogVersion={catalog.version} origin={draft} places={catalog.places.filter(place => distanceMeters(draft, place) <= 1000).slice(0, 40)} interactive onOriginChange={setDraftOrigin} theme={config.preferences.theme} /><div className="setup-map-help"><MapPin size={15} />Click the map to move your entrance pin</div></div>
     <div className="coordinate-fields"><label htmlFor="latitude">Latitude<input id="latitude" type="number" min="41.6" max="42.1" step="0.000001" value={latitude} onChange={event => { setLatitude(event.target.value); setChanged(true); }} /></label><label htmlFor="longitude">Longitude<input id="longitude" type="number" min="-88" max="-87.45" step="0.000001" value={longitude} onChange={event => { setLongitude(event.target.value); setChanged(true); }} /></label><button className="primary-button" onClick={confirmLocation}><Check size={16} />{changed ? 'Confirm entrance' : 'Location confirmed'}</button></div>
     {accuracy !== null && <p className="field-hint">GPS accuracy: approximately {accuracy} m. Distances are straight-line estimates, not walking routes.</p>}
     <div className="notice-box"><ShieldCheck size={18} /><span>Only your confirmed coordinates are saved. The address you search stays out of your board configuration.</span></div>
@@ -210,7 +211,7 @@ function ConnectionsSettings({ config, setConfig, catalog, providers, mode, anno
         const provider = providers.find(item => item.id === place.provider_id);
         return <div className={`place-result${selected ? ' is-selected' : ''}`} key={place.id}><span className={`place-icon kind-${place.kind}`}><Icon size={22} /></span><div className="place-copy"><strong>{place.name}</strong><span>{place.direction || categories.find(item => item.id === place.kind)?.label}{place.routes.length > 0 && <span className="place-routes"> · {place.routes.slice(0, 5).join(', ')}</span>}</span>{mode === 'live' && provider && provider.connection_state !== 'enabled' && <small className="provider-pending">{provider.connection_state === 'pending' ? 'Integration pending' : 'Provider not connected'}</small>}</div><span className="place-distance">{formatDistance(place.distance)}</span><button className={`pin-button${selected ? ' pinned' : ''}`} aria-label={`${selected ? 'Unpin' : 'Pin'} ${place.name}${place.direction ? ` ${place.direction}` : ''}`} aria-pressed={selected} disabled={!selected && limitReached} onClick={() => togglePlace(place)}>{selected ? <Check size={17} /> : <Plus size={17} />}</button></div>;
       }) : <div className="no-results"><Search size={27} /><strong>No stops in this search.</strong><p>Try a different name, category, or a larger radius.</p><button className="secondary-button" onClick={() => setRadius(Math.min(80000, radius * 2))}>Expand the search</button></div>}</div>
-      <p className="catalog-note">{catalog.coverage_note || 'Stop choices come from the connected catalog.'} {mode === 'demo' ? 'This is a sample catalog for the demo board.' : ''}</p>
+      <p className="catalog-note">{catalog.coverage_note || 'Stop choices come from the connected catalog.'} {metraDisclaimer} {mode === 'demo' ? 'This is a sample catalog for the demo board.' : `Station data updated ${stationDataDate(catalog.version)}.`}</p>
     </> : <div className="pinned-list">{!config.selections.length && !config.vehicle_rules.length && <div className="no-results"><MapPin size={26} /><strong>No stops selected</strong><p>Choose a nearby stop to add it to the display.</p></div>}{config.selections.map((selection, index) => {
       const place = catalog.places.find(item => item.id === selection.place_id);
       return <div className="pinned-item" key={selection.id}><div className="pinned-topline"><span className="pinned-number">{String(index + 1).padStart(2, '0')}</span><div><strong>{place?.name ?? 'Stop no longer in catalog'}</strong><small>{place?.direction || place?.kind.replaceAll('_', ' ') || selection.place_id}</small></div><div className="reorder-buttons"><button className="icon-button" aria-label={`Move ${place?.name ?? 'stop'} up`} disabled={index === 0} onClick={() => moveSelection(index, -1)}><ArrowUp size={16} /></button><button className="icon-button" aria-label={`Move ${place?.name ?? 'stop'} down`} disabled={index === config.selections.length - 1} onClick={() => moveSelection(index, 1)}><ArrowDown size={16} /></button><button className="icon-button remove-button" aria-label={`Remove ${place?.name ?? 'stop'}`} onClick={() => setConfig(current => ({ ...current, selections: current.selections.filter(item => item.id !== selection.id) }))}><Trash2 size={15} /></button></div></div>

@@ -1,5 +1,7 @@
 # Data and map sources
 
+**Launch status and unresolved permissions:** see the [all-provider compliance review](mobility-compliance-review.md). Plain-text labels do not resolve Divvy’s written name/mark permission clause.
+
 Source code licensing does not grant rights to upstream data or map services. Operators must review the applicable provider terms for their public display. Providers are identified with plain text; no operator logo images are bundled.
 
 | Integration | Primary references | Implementation notes |
@@ -35,3 +37,5 @@ The checked-in route snapshot was imported on September 14, 2026 from [CTA GTFS]
 CTA, Metra and Divvy are identified by plain text in cards, map labels and stop details. Operator logo images have been removed from the app and offline cache manifest. Provider names remain their owners' trademarks; these descriptive labels do not imply endorsement. See the [CTA branding guide](https://www.transitchicago.com/developers/branding/) and [repository review](cta-compliance-review.md).
 
 The interface now uses DM Sans only. The existing Manrope files remain available for compatibility.
+
+The hosted basemap’s additional WorldCover landcover and Mapzen icon credits are available in [the public map notices](../public/data-notices.html#map-credits), following [Protomaps data-license references](https://github.com/protomaps/basemaps/blob/main/LICENSE_DATA.md).

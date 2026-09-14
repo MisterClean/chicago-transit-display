@@ -92,7 +92,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         version: format!("chicago-{date}"),
         places,
         coverage_note: format!(
-            "CTA stops and stations from City of Chicago open data and Metra station locations from official GTFS, imported {date} within the supported Chicago region. Metra times are not connected. Divvy stations appear when its optional collector is enabled. Location data may change; this catalog is a versioned snapshot."
+            "CTA stops and stations from City of Chicago open data and Metra station locations from official GTFS, imported {date} within the supported Chicago region. Not sponsored or operated by Metra. Metra times are not connected. Divvy stations appear when its optional collector is enabled. Location data may change; this catalog is a versioned snapshot."
         ),
     };
     let temp = output.with_extension("json.tmp");
