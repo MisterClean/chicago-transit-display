@@ -14,7 +14,7 @@ reqwest = { version = "0.12", default-features = false, features = ["json", "rus
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "net", "signal", "time", "sync"] }
-tower-http = { version = "0.6", features = ["compression-gzip", "set-header", "fs"] }
+tower-http = { version = "0.7", features = ["compression-gzip", "set-header", "fs"] }
 
 zip = { version = "2", default-features = false, features = ["deflate"] }
 csv = "1"
