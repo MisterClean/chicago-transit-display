@@ -1,0 +1,17 @@
+export type PlaceKind = 'bus_stop' | 'rail_station' | 'metra_station' | 'shared_station';
+export type Origin = { lat: number; lon: number };
+export type Place = Origin & { id: string; provider_id: string; source_id: string; kind: PlaceKind; name: string; routes: string[]; direction?: string; color?: string };
+export type Provider = { id: string; name: string; connection_state: 'enabled' | 'pending' | 'unavailable' | 'disabled'; message?: string; attribution: string; terms_url: string };
+export type Freshness = { fetched_at: string; source_observed_at?: string; stale_at: string; expires_at: string; state: 'fresh' | 'stale' | 'unavailable' };
+export type TransitEvent = { id: string; route: string; destination: string; expected_at: string | null; scheduled_at: string | null; time_basis: 'prediction' | 'schedule' | 'unknown'; status: 'normal' | 'delayed' | 'canceled' | 'skipped' | 'unknown'; approaching: boolean; event_kind: 'arrival' | 'departure'; color?: string; freshness: Freshness };
+export type Vehicle = Origin & { id: string; type: 'classic' | 'electric' | 'scooter'; distance_m: number; location_label?: string; freshness: Freshness };
+export type BoardCard = { id: string; kind: PlaceKind | 'vehicles'; title: string; subtitle: string; provider_id: string; state: 'ready' | 'loading' | 'empty' | 'unavailable' | 'stale' | 'not_connected' | 'removed'; message?: string; place?: Place; events: TransitEvent[]; availability?: { classic: number | null; electric: number | null; scooters: number | null; docks: number | null; rental_state: 'available' | 'unavailable' | 'unknown' }; vehicles: Vehicle[]; freshness?: Freshness; alerts: string[] };
+export type Selection = { id: string; place_id: string; route?: string; destination?: string; limit: number };
+export type VehicleRule = { id: string; provider_id: 'divvy'; type: 'electric' | 'scooter'; radius_m: number; limit: number };
+export type BoardQuery = { selections: Selection[]; vehicle_rules: VehicleRule[]; origin?: Origin };
+export type BoardResponse = { schema_version: 1; server_time: string; next_poll_after_s: number; catalog_version: string; cards: BoardCard[]; providers: Provider[]; attributions: string[] };
+export type Capabilities = { schema_version: 1; catalog_version: string; providers: Provider[]; geocoding: boolean; limits: { max_cards: number; max_radius_m: number } };
+export type Catalog = { version: string; places: Place[]; coverage_note: string };
+export type GeocodeResponse = { candidates: (Origin & { label: string })[]; message?: string };
+export type BoardConfig = { version: 1; label: string; origin: Origin; selections: Selection[]; vehicle_rules: VehicleRule[]; preferences: { theme: 'dark' | 'light'; time_format: '12h' | '24h'; show_map: boolean; show_alerts: boolean; text_scale: number; orientation: 'auto' | 'landscape' | 'portrait' } };
+export type DataMode = 'demo' | 'live';

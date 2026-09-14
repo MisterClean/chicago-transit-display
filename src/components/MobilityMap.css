@@ -1,0 +1,16 @@
+.mobility-map-container { position: relative; width: 100%; height: 100%; min-height: 240px; overflow: hidden; background: #16242a; }
+.map-light { background: #e1e6e1; }
+.mobility-map-canvas { width: 100%; height: 100%; position: absolute; inset: 0; }
+.map-state { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 10px; padding: 28px; text-align: center; background: radial-gradient(ellipse at center, #253533, #152228); color: #d8e2da; }
+.map-state-symbol { font-size: 40px; color: #d4e78d; }
+.map-state strong { font-size: 16px; font-weight: 600; }
+.map-state p { max-width: 250px; font-size: 13px; color: #acbcb9; line-height: 1.6; margin: 0; }
+.map-retry { border: 1px solid #60746c; background: #21332b; color: #d8e2da; padding: 7px 14px; border-radius: 5px; cursor: pointer; }
+.map-attribution { position: absolute; bottom: 0; left: 0; z-index: 3; background: #ffffffdc; color: #303b37; font: 10px/1.7 system-ui, sans-serif; display: flex; gap: 4px; padding: 1px 5px; border-top-right-radius: 3px; }
+.map-attribution a { color: inherit; text-decoration: none; }
+.map-attribution a:hover { text-decoration: underline; }
+.mobility-marker { display: grid; place-items: center; width: 32px; height: 32px; border: 2px solid #152327; border-radius: 10px; background: #e7ebe1; color: #20342e; font: 700 12px/1 system-ui,sans-serif; box-shadow: 0 3px 8px #0005; }
+.mobility-marker.shared-marker { background: #91d5c1; }
+.mobility-marker.vehicle-marker { background: #dfc688; border-radius: 50%; width: 30px; height: 30px; font-size: 10px; }
+.mobility-marker.origin-marker { width: 18px; height: 18px; background: #e4ec9a; border: 4px solid #273e36; border-radius: 50%; box-shadow: 0 0 0 8px #d9ec8633, 0 0 0 20px #d9ec8614; }
+.maplibregl-ctrl-attrib { font-size: 10px !important; }
