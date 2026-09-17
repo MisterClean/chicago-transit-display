@@ -28,7 +28,9 @@ cp server/.env.example server/.env
 npm run dev:server
 ```
 
-After establishing applicable live-feed rights and required written name/mark permission, set `DIVVY_ENABLED=true` in `server/.env` for station counts and undocked bikes. An API key is not required, but public availability does not establish launch permission. Allow up to 60 seconds for the first live observations. CTA bus and train predictions need separate `CTA_BUS_API_KEY` and `CTA_TRAIN_API_KEY` values in the same file, followed by a backend restart. Missing providers stay marked **Not connected**. Metra departures are not yet implemented.
+After establishing applicable live-feed rights and required written name/mark permission, set `DIVVY_ENABLED=true` in `server/.env` for station counts and undocked bikes. An API key is not required, but public availability does not establish launch permission. Allow up to 60 seconds for the first live observations. CTA bus and train predictions need separate `CTA_BUS_API_KEY` and `CTA_TRAIN_API_KEY` values in the same file, followed by a backend restart. With an automatically downloaded schedule, CTA and Metra show published departures while realtime is not configured. Providers without either source stay marked **Not connected**.
+
+The server automatically downloads CTA and Metra schedules at startup and refreshes them daily. Existing cached schedules are available immediately while downloads run in the background. On the first run, scheduled cards show a loading message until the import completes. Failed downloads keep the last valid schedule and retry after 15 minutes. Generated timetable JSON stays in `server/data/runtime/`, which is excluded from Git. No manual import is required.
 
 Use **Customize** to choose from the live catalog. If this browser previously selected a demo, change the header to **Live board** once. The backend starts with no paid provider requests enabled. See [server setup and provider configuration](server/README.md).
 
@@ -49,12 +51,13 @@ Use **Customize** to choose from the live catalog. If this browser previously se
 | CTA Bus Tracker | Native arrivals adapter, shared collector, current stop catalog | Server API key; authenticated deployment verification |
 | CTA Train Tracker | Native arrivals adapter preserving schedule/delay/approaching flags | Separate server API key; authenticated deployment verification |
 | Divvy GBFS 2.x | Station information/status, type classification, eligible free vehicles | Explicit feed enablement after reviewing applicable live-data terms |
-| Metra | Places and a clear pending connection state | Realtime/static schedule joins are not implemented in this MVP |
+| CTA GTFS schedules | Published bus and rail departures when realtime is not configured | Automatic startup and daily refresh |
+| Metra | Places, routes and published scheduled departures | Automatic schedule refresh; realtime adapter not implemented |
 | Lime / other scooter operators | Disabled | Provider eligibility, terms, and adapter validation |
 | Geocodio | Submitted address candidates | Server API key; no autocomplete |
 | Protomaps | Hosted vector basemap rendered with MapLibre | Public browser key with origin restrictions |
 
-Demo schedules are illustrative. The app does not fabricate Metra scheduled service in live mode. GTFS timetable/calendar ingestion, alerts ingestion, a multi-day kiosk soak, production quota approval, and a 1,000-display load test remain future work. This repository does not claim those production acceptance gates have passed.
+Demo schedules are illustrative. The app does not fabricate Metra scheduled service in live mode. Alerts ingestion, a multi-day kiosk soak, production quota approval, and a 1,000-display load test remain future work. This repository does not claim those production acceptance gates have passed.
 
 ## Privacy and secrets
 
@@ -99,7 +102,7 @@ Source code is [MIT licensed](LICENSE). Provider data, map tiles, fonts, and lib
 
 The desktop layout uses equal-width mobility and map panes. Stop labels include plain operator names, pedal/e-bike counts, and the next two available times for each route and destination. Undocked Divvy vehicles appear at their reported coordinates. The map retains all selected places while the mobility list paginates. Map lines can be toggled independently for CTA buses, CTA rail, and Metra. Narrow screens stack the list and map; crowded map labels open a keyboard-accessible detail view.
 
-`public/data/transit-routes.geojson` is a versioned snapshot of official CTA and Metra GTFS shapes (125 bus routes, 8 CTA rail lines, 11 Metra lines in the September 14, 2026 import). It joins `trips.txt` to `shapes.txt`, retains separate variants, orders vertices by sequence, and simplifies within four meters. These are route paths, not an assertion of current service; short-term detours may be absent. Metra live departures remain unconnected and are labeled accordingly. Demo Metra times are illustrative.
+`public/data/transit-routes.geojson` is a versioned snapshot of official CTA and Metra GTFS shapes (125 bus routes, 8 CTA rail lines, 11 Metra lines in the September 14, 2026 import). It joins `trips.txt` to `shapes.txt`, retains separate variants, orders vertices by sequence, and simplifies within four meters. These are route paths, not an assertion of current service; short-term detours may be absent. Metra departures use imported published schedules; realtime remains unconnected. Demo Metra times are illustrative.
 
 Refresh the snapshot before a release when needed:
 

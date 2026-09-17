@@ -43,6 +43,12 @@ MIT source license, separate provider data/tiles terms; no keys in tracked sourc
 
 The desktop board uses equal-width list and map panes. `MobilityMap` also accepts `cards`, `now`, `online`, `mode`, and `timeFormat` to render provider marks and current observations, independently of list pagination. Label displacement uses leader lines to preserve geographic meaning. Compact labels open a detail region when available space is insufficient.
 
-For transit, the server applies `selection.limit` per route/destination group, preserving a minimum of two observations per group for the map and bounding the response to 100 events per card. The list honors the requested per-group limit, while map labels show two. CTA predictions remain arrivals as supplied by the provider; scheduled Metra demo events remain explicitly scheduled. No live Metra schedule adapter is introduced.
+For transit, the server applies `selection.limit` per route/destination group, preserving a minimum of two observations per group for the map and bounding the response to 100 events per card. The list honors the requested per-group limit, while map labels show two. CTA predictions remain arrivals as supplied by the provider; scheduled Metra demo events remain explicitly scheduled. Live mode now supports imported CTA and Metra GTFS scheduled departures when realtime is not configured.
 
 Local route geometry lives at `/data/transit-routes.geojson` and is schema-validated by the browser. Layer toggles do not change board selections or upstream queries. Route shapes are static and do not establish current service availability.
+
+## Schedule fallback
+
+See server/README.md for import, refresh and source-selection behavior. Provider responses add `realtime_configured`, `active_source` (`realtime | schedule | none`) and optional `schedule` metadata. Schedule cards also include `schedule`: `{ version, imported_at, coverage_start, coverage_end, valid_until }`. Existing event fields distinguish schedule times from predictions. Schedule response freshness is independent of feed validity; an old download is not a stale realtime observation.
+
+Schedules refresh automatically in the background on startup and daily. Only validated imports atomically replace the local ignored cache and in-memory schedule/catalog; failures retain existing data and retry after 15 minutes. First-run cards show loading until the import completes.

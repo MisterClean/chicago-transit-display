@@ -33,6 +33,10 @@ pub struct Provider {
     pub id: String,
     pub name: String,
     pub connection_state: String,
+    pub realtime_configured: bool,
+    pub active_source: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub schedule: Option<crate::schedule::ScheduleInfo>,
     pub message: String,
     pub attribution: String,
     pub terms_url: String,
@@ -135,6 +139,8 @@ pub struct BoardCard {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub freshness: Option<Freshness>,
     pub alerts: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub schedule: Option<crate::schedule::ScheduleInfo>,
 }
 impl BoardCard {
     pub fn placeholder(id: &str, place: Option<Place>) -> Self {
@@ -159,6 +165,7 @@ impl BoardCard {
             vehicles: vec![],
             freshness: None,
             alerts: vec![],
+            schedule: None,
         }
     }
 }

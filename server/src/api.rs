@@ -76,7 +76,7 @@ async fn not_found() -> Response {
 async fn capabilities(State(state): State<AppState>) -> Json<Value> {
     let cache = state.cache.read().await;
     Json(
-        json!({"schema_version":1,"catalog_version":cache.catalog.version,"providers":state.settings.providers(&cache.failed),"geocoding":state.settings.geocodio_key.is_some(),"limits":{"max_cards":MAX_CARDS,"max_radius_m":2000}}),
+        json!({"schema_version":1,"catalog_version":cache.catalog.version,"providers":state.providers(&cache, Utc::now()),"geocoding":state.settings.geocodio_key.is_some(),"limits":{"max_cards":MAX_CARDS,"max_radius_m":2000}}),
     )
 }
 async fn catalog(State(state): State<AppState>) -> Json<Catalog> {

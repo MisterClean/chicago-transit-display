@@ -11,7 +11,7 @@ Source code licensing does not grant rights to upstream data or map services. Op
 | CTA places | [Chicago Data Portal](https://data.cityofchicago.org/), [CTA GTFS](https://www.transitchicago.com/developers/gtfs/) | Catalog provenance and refresh command in server/README.md |
 | Divvy | [System data](https://divvybikes.com/system-data), [GBFS discovery](https://gbfs.divvybikes.com/gbfs/2.3/gbfs.json), [published license](https://divvybikes.com/data-license-agreement) | Live child feeds inspected during implementation; explicit enablement; review applicable live-feed terms |
 | GBFS | [Specification](https://gbfs.org/documentation/reference/) | Source timestamps, rentability and vehicle types determine eligibility |
-| Metra | [Developers](https://metra.com/developers) | Official static route geometry is included; live departures are pending. Demo times are illustrative. |
+| Metra | [Developers](https://metra.com/developers) | Official GTFS geometry and imported scheduled departures are supported; realtime departures remain pending. Demo times are illustrative. |
 | Geocodio | [Documentation](https://www.geocod.io/docs/), [terms](https://www.geocod.io/terms-of-use) | Submit only; no implicit address requests |
 | Protomaps | [Hosted API](https://protomaps.com/api), [MapLibre basemaps](https://docs.protomaps.com/basemaps/maplibre) | v5 styles over v4 vector tiles; attribution shown on every map, browser key restricted by origin |
 | OpenStreetMap | [Copyright / ODbL](https://www.openstreetmap.org/copyright) | Basemap data attribution; no use of public OSM raster tile servers |

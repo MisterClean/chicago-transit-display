@@ -35,7 +35,7 @@ function MobilityCard({ card, config, now, online, mode, onConfigure }: {
   const approxDistance = card.place ? formatDistance(distanceMeters(config.origin, card.place)) : null;
   const isScooter = card.kind === 'vehicles' && (card.title.toLowerCase().includes('scooter') || config.vehicle_rules.find(rule => rule.id === card.id)?.type === 'scooter');
   const category = isScooter ? 'NEARBY SCOOTERS' : categoryNames[card.kind];
-  const emptyHeading = expired ? 'Waiting for fresh data' : card.state === 'not_connected' ? 'Provider not connected' : card.state === 'removed' ? 'Choose a replacement' : card.state === 'loading' ? 'Finding the latest…' : card.kind === 'shared_station' ? 'Station unavailable' : 'Feed unavailable';
+  const emptyHeading = card.schedule && unavailable && !expired ? 'Schedule unavailable' : expired ? 'Waiting for fresh data' : card.state === 'not_connected' ? 'Provider not connected' : card.state === 'removed' ? 'Choose a replacement' : card.state === 'loading' ? 'Finding the latest…' : card.kind === 'shared_station' ? 'Station unavailable' : 'Feed unavailable';
   const isShared = card.kind === 'shared_station';
   const rentalsClosed = availability?.rental_state === 'unavailable';
   const knownBikeTotal = availability?.classic != null && availability?.electric != null ? availability.classic + availability.electric : null;
@@ -61,11 +61,12 @@ function MobilityCard({ card, config, now, online, mode, onConfigure }: {
         <span className="vehicle-info"><strong>{vehicle.location_label || `${isScooter ? 'Scooter' : 'E-bike'} ${vehicleIndex + 1}`}</strong><small>Approximate location</small></span>
         <strong className="vehicle-distance">{formatDistance(vehicle.distance_m)}</strong>
       </div>) : <div className="inline-empty"><Bike size={24} /><span>{!online ? 'Availability hidden while offline' : stale ? 'Waiting for fresh availability' : 'No vehicles reported nearby'}<small>{card.message || 'This search updates automatically.'}</small></span></div>}
-    </div> : freshEvents.length ? <Departures events={freshEvents} now={now} timeFormat={config.preferences.time_format} limit={arrivalLimit} /> : <div className="inline-empty"><Clock3 size={23} /><span>No live predictions<small>{card.message || 'Check provider schedules for other service.'}</small></span></div>}
+    </div> : freshEvents.length ? <Departures events={freshEvents} now={now} timeFormat={config.preferences.time_format} limit={arrivalLimit} /> : <div className="inline-empty"><Clock3 size={23} /><span>{card.schedule ? 'No scheduled departures' : 'No live predictions'}<small>{card.message || 'Check provider schedules for other service.'}</small></span></div>}
 
 
     <div className="card-footer"><span className={`status-dot ${mode === 'demo' ? 'amber' : unavailable ? 'muted' : stale ? 'amber' : 'green'}`} />
-      {mode === 'demo' ? 'DEMO DATA' : unavailable ? 'UNAVAILABLE' : stale ? 'STALE DATA' : card.kind === 'vehicles' || isShared ? 'LIVE AVAILABILITY' : freshEvents.length && freshEvents.every(event => event.time_basis === 'schedule') ? 'SCHEDULED' : 'LIVE PREDICTIONS'}
+      {mode === 'demo' ? 'DEMO DATA' : unavailable ? 'UNAVAILABLE' : stale ? 'STALE DATA' : card.kind === 'vehicles' || isShared ? 'LIVE AVAILABILITY' : card.schedule || (freshEvents.length && freshEvents.every(event => event.time_basis === 'schedule')) ? 'SCHEDULED' : 'LIVE PREDICTIONS'}
+      {card.schedule && !unavailable && <span className="card-footer-note" title={`Schedule imported ${card.schedule.imported_at.slice(0, 10)} · service ${card.schedule.coverage_start} through ${card.schedule.coverage_end}`}>Realtime not connected</span>}
       {config.preferences.show_alerts && card.alerts.length > 0 && <span className="card-alert" title={card.alerts.join(' · ')}><TriangleAlert size={12} />{card.alerts[0]}</span>}
       {card.kind === 'vehicles' && <span className="card-footer-note">Rent in the Divvy app <ArrowUpRight size={12} /></span>}
     </div>
@@ -112,7 +113,7 @@ export default function App() {
   const clock = formatClock(now, config.preferences.time_format);
   const clockParts = /^(.*)\s(AM|PM)$/.exec(clock);
   const refreshAge = board ? Math.max(0, Math.floor((now - Date.parse(board.server_time)) / 1000)) : 0;
-  const connectionText = !online ? 'Offline · data may be out of date' : error ? 'Connection interrupted · retrying' : mode === 'demo' ? 'Preview with sample data' : loading && !board ? 'Connecting to live feeds' : 'Connected to your board';
+  const connectionText = !online ? 'Offline · data may be out of date' : error ? 'Connection interrupted · retrying' : mode === 'demo' ? 'Preview with sample data' : loading && !board ? 'Connecting to your board' : board?.cards.some(card => card.schedule) ? 'Connected · includes scheduled service' : 'Connected to your board';
 
   useEffect(() => { const timer = window.setInterval(() => setNow(Date.now()), 1000); return () => window.clearInterval(timer); }, []);
   useEffect(() => {
@@ -188,7 +189,7 @@ export default function App() {
       </div>
     </main>
 
-    <footer inert={setupOpen || infoOpen} className="app-footer"><div className="freshness-status" role="status" aria-live="polite"><span className={`status-dot ${!online || error ? 'amber' : mode === 'demo' ? 'amber' : 'green'}`} />{connectionText}</div><div className="footer-center">{mode === 'demo' ? 'Sample arrivals & availability · not for trip planning' : 'Times are estimates. Check the operator for service changes.'}<span className="independence-note">Independent app · not made or endorsed by CTA.</span>{board?.cards.some(card => card.provider_id === 'metra') && <span className="independence-note">{metraDisclaimer} Stations: {mode === 'demo' ? 'sample data' : stationDataDate(catalog.version)}.</span>}</div><div className="footer-actions"><button onClick={refresh} aria-label="Refresh board" className={`refresh-button${loading ? ' is-refreshing' : ''}`} disabled={loading || !online}><RefreshCw size={12} /><span>{loading ? 'Refreshing' : board ? `Updated ${refreshAge < 5 ? 'just now' : `${refreshAge}s ago`}` : 'Refresh'}</span></button><button className="attribution-button" onClick={() => { modalTrigger.current = document.activeElement as HTMLElement; setInfoOpen(true); }} aria-label="Data sources and about"><CircleHelp size={13} /><span>Sources & about</span></button></div></footer>
+    <footer inert={setupOpen || infoOpen} className="app-footer"><div className="freshness-status" role="status" aria-live="polite"><span className={`status-dot ${!online || error ? 'amber' : mode === 'demo' ? 'amber' : 'green'}`} />{connectionText}</div><div className="footer-center">{mode === 'demo' ? 'Sample arrivals & availability · not for trip planning' : board?.cards.some(card => card.schedule) ? 'Scheduled times do not include delays or cancellations.' : 'Times are estimates. Check the operator for service changes.'}<span className="independence-note">Independent app · not made or endorsed by CTA.</span>{board?.cards.some(card => card.provider_id === 'metra') && <span className="independence-note">{metraDisclaimer} Stations: {mode === 'demo' ? 'sample data' : stationDataDate(catalog.version)}.</span>}</div><div className="footer-actions"><button onClick={refresh} aria-label="Refresh board" className={`refresh-button${loading ? ' is-refreshing' : ''}`} disabled={loading || !online}><RefreshCw size={12} /><span>{loading ? 'Refreshing' : board ? `Updated ${refreshAge < 5 ? 'just now' : `${refreshAge}s ago`}` : 'Refresh'}</span></button><button className="attribution-button" onClick={() => { modalTrigger.current = document.activeElement as HTMLElement; setInfoOpen(true); }} aria-label="Data sources and about"><CircleHelp size={13} /><span>Sources & about</span></button></div></footer>
 
     {setupOpen && <SetupPanel config={config} setConfig={setConfig} catalog={catalog} providers={providers} mode={mode} setMode={setMode} onClose={closeSetup} onDisplay={() => void toggleKiosk()} />}
     {infoOpen && <AboutDialog catalogVersion={catalog.version} onClose={closeAbout} attributions={board?.attributions ?? []} mode={mode} />}
@@ -219,8 +220,8 @@ function AboutDialog({ onClose, attributions, mode, catalogVersion }: { catalogV
       <p>An open-source neighborhood mobility board for Chicago. No account required. Your saved configuration stays in this browser. This app is not made or endorsed by CTA.</p>
       {mode === 'demo' && <div className="notice-box"><TriangleAlert size={18} /><span>You’re viewing a demonstration. All arrivals and vehicle availability on this board are sample data.</span></div>}
       <h3>Data & mapping</h3>
-      <p>Data provided by Chicago Transit Authority. CTA stop locations and route paths are included; live arrivals use CTA Bus Tracker and CTA Train Tracker when connected. Times and availability are estimates; check the operator before travel.</p>
-      <p>{metraDisclaimer} {mode === 'demo' ? 'Demo stations and departures are illustrative.' : `Station data updated ${stationDataDate(catalogVersion)}.`} Metra route paths show their separate update date on the map. Live Metra departures are not connected.</p>
+      <p>Data provided by Chicago Transit Authority. CTA stop locations and route paths are included; live arrivals use CTA Bus Tracker and CTA Train Tracker when connected. Published GTFS schedules are used when realtime is not configured. Times and availability are estimates; check the operator before travel.</p>
+      <p>{metraDisclaimer} {mode === 'demo' ? 'Demo stations and departures are illustrative.' : `Station data updated ${stationDataDate(catalogVersion)}.`} Metra route paths show their separate update date on the map. Metra departures use published schedules when installed; realtime is not connected.</p>
       {attributions.length > 0 && <p>{attributions.join(' · ')}</p>}
       <p>Divvy availability comes from its public GBFS feed when connected. This app is not affiliated with or endorsed by Divvy, Lyft, or the City of Chicago. Provider data and map tiles retain their own licenses.</p>
       <p className="source-links">

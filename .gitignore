@@ -9,7 +9,10 @@ target/
 server/.env
 .envrc
 *.local
+# Generated GTFS schedules and downloads stay local.
 server/data/runtime/
+server/data/schedules*.json
+server/data/*.zip
 playwright-report/
 test-results/
 coverage/

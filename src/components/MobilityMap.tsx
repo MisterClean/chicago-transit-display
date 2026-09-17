@@ -32,7 +32,7 @@ function MapCardInfo({ card, now, online, timeFormat }: { card: BoardCard; now: 
     <span className="map-destination"><b>{group.route}</b> · {group.destination}</span>
     <span className="map-times">{group.events.map(event => <span key={event.id}>{formatEvent(event, now, timeFormat).replace(/^Scheduled\s*[·:]\s*/, '')}{event.time_basis === 'schedule' && !group.events.every(item => item.time_basis === 'schedule') && <small>Scheduled</small>}</span>)}</span>
     {group.events.every(event => event.time_basis === 'schedule') && <small>Scheduled</small>}
-  </span>) : <span className="map-data-status">No predictions available</span>}{state === 'stale' && <span className="map-data-status">{online ? 'Stale predictions' : 'Offline · last known predictions'}</span>}</>;
+  </span>) : <span className="map-data-status">{card.schedule ? 'No scheduled departures in the next 3 hours' : 'No predictions available'}</span>}{state === 'stale' && <span className="map-data-status">{card.schedule ? online ? 'Schedule view needs refresh' : 'Offline · saved schedule' : online ? 'Stale predictions' : 'Offline · last known predictions'}</span>}</>;
 }
 
 export default function MobilityMap({ origin, places, vehicles = [], cards = [], interactive = false, onOriginChange, theme = 'dark', now = Date.now(), online = true, mode = 'live', timeFormat = '12h', catalogVersion = '', focusKey = 0 }: Props) {

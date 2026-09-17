@@ -32,12 +32,13 @@ impl Settings {
         [
             ("cta_bus", "CTA Bus", self.bus_key.is_some(), "Add a CTA Bus Tracker key to connect live predictions.", "Data provided by Chicago Transit Authority", cta_terms),
             ("cta_rail", "CTA Rail", self.rail_key.is_some(), "Add a CTA Train Tracker key to connect live predictions.", "Data provided by Chicago Transit Authority", cta_terms),
-            ("metra", "Metra", false, "Station locations available. Timetables and real-time service are not connected in this MVP.", "Metra station locations. Not sponsored or operated by Metra.", "https://metra.com/sites/default/files/assets/developers/gtfs_license_agreement.pdf"),
+            ("metra", "Metra", false, "Import the Metra schedule feed to show published departures. Realtime is not connected.", "Metra data. Not sponsored or operated by Metra.", "https://metra.com/sites/default/files/assets/developers/gtfs_license_agreement.pdf"),
             ("divvy", "Divvy", self.divvy_enabled, "Optional GBFS integration. Public launch requires confirmed live-data rights and any required written name/mark permission; see docs/mobility-compliance-review.md.", "Divvy availability data provided by Lyft / Divvy", "https://divvybikes.com/data-license-agreement"),
             ("lime", "Lime", false, "Disabled pending display and aggregation permission.", "Lime integration is not enabled", "https://www.li.me/legal/public-gbfs-terms"),
             ("spin", "Spin", false, "Disabled pending access, current service, and terms verification.", "Spin integration is not enabled", "https://www.spin.app/")
         ].into_iter().map(|(id, name, enabled, pending, attribution, terms)| Provider {
             id: id.into(), name: name.into(),
+            realtime_configured: enabled, active_source: if enabled { "realtime" } else { "none" }.into(), schedule: None,
             connection_state: if !enabled { if ["lime", "spin"].contains(&id) { "disabled" } else { "pending" } } else if failed.contains_key(id) { "unavailable" } else { "enabled" }.into(),
             message: if enabled { failed.get(id).copied().unwrap_or("Connected adapter; live observations appear after the shared collector refreshes.") } else { pending }.into(),
             attribution: attribution.into(), terms_url: terms.into(),
@@ -54,6 +55,9 @@ impl Settings {
 }
 
 pub struct Cache {
+    pub schedules: Arc<crate::schedule::ScheduleStore>,
+    pub schedule_refreshing: bool,
+    pub schedule_error: Option<&'static str>,
     pub catalog: Catalog,
     pub places: HashMap<String, Place>,
     pub demand: HashMap<String, DateTime<Utc>>,
@@ -70,6 +74,9 @@ pub struct Cache {
 impl Cache {
     pub fn new(catalog: Catalog) -> Self {
         Self {
+            schedules: Arc::new(crate::schedule::ScheduleStore::default()),
+            schedule_refreshing: false,
+            schedule_error: None,
             places: catalog
                 .places
                 .iter()
@@ -159,6 +166,49 @@ impl AppState {
             geocode_slots: Arc::new(Semaphore::new(1)),
         })
     }
+    /// Install a fully validated store before starting collectors or accepting requests.
+    pub fn with_schedules(
+        mut self,
+        schedules: crate::schedule::ScheduleStore,
+    ) -> Result<Self, Box<dyn std::error::Error>> {
+        schedules.validate()?;
+        let mut catalog = catalog::load()?;
+        schedules.enrich(&mut catalog);
+        let mut cache = Cache::new(catalog);
+        cache.schedules = Arc::new(schedules);
+        self.cache = Arc::new(RwLock::new(cache));
+        Ok(self)
+    }
+    pub fn providers(&self, cache: &Cache, now: DateTime<Utc>) -> Vec<Provider> {
+        let mut providers = self.settings.providers(&cache.failed);
+        for provider in &mut providers {
+            if let Some(feed) = cache.schedules.feed(&provider.id) {
+                provider.schedule = Some(feed.info.clone());
+                if !provider.realtime_configured {
+                    provider.active_source = "schedule".into();
+                    provider.connection_state = if feed.covers(now) {
+                        "enabled"
+                    } else {
+                        "unavailable"
+                    }
+                    .into();
+                    provider.message = if feed.covers(now) { "Published schedules available; realtime is not connected." } else { "Published schedule is outside its coverage dates. Refresh the schedule feed." }.into();
+                }
+            } else if !provider.realtime_configured
+                && ["cta_bus", "cta_rail", "metra"].contains(&provider.id.as_str())
+            {
+                if cache.schedule_refreshing {
+                    provider.message =
+                        "Downloading published schedules. Departures will appear automatically."
+                            .into();
+                } else if let Some(error) = cache.schedule_error {
+                    provider.message = error.into();
+                    provider.connection_state = "unavailable".into();
+                }
+            }
+        }
+        providers
+    }
     pub async fn board(&self, query: BoardQuery, now: DateTime<Utc>) -> BoardResponse {
         let mut cache = self.cache.write().await;
         cache.cleanup(now);
@@ -195,8 +245,33 @@ impl AppState {
                 continue;
             };
             if !self.settings.enabled(&place.provider_id) {
+                if let Some(feed) = cache.schedules.feed(&place.provider_id) {
+                    feed.fill_card(&mut card, &selection, now);
+                    cards.push(card);
+                    continue;
+                }
+                if cache.schedule_refreshing
+                    && ["cta_bus", "cta_rail", "metra"].contains(&place.provider_id.as_str())
+                {
+                    card.state = "loading".into();
+                    card.message = Some(
+                        "Downloading published schedules. Departures will appear automatically."
+                            .into(),
+                    );
+                    cards.push(card);
+                    continue;
+                }
                 card.state = "not_connected".into();
-                card.message = Some(if place.provider_id == "metra" { "Station location only. Metra schedules and live departures are not connected." } else { "This provider is not connected on this server." }.into());
+                card.message = Some(
+                    if ["cta_bus", "cta_rail", "metra"].contains(&place.provider_id.as_str()) {
+                        cache.schedule_error.unwrap_or(
+                            "Realtime is not connected and no published schedule is loaded yet.",
+                        )
+                    } else {
+                        "This provider is not connected on this server."
+                    }
+                    .into(),
+                );
                 cards.push(card);
                 continue;
             }
@@ -382,7 +457,7 @@ impl AppState {
             }
             cards.push(card);
         }
-        let providers = self.settings.providers(&cache.failed);
+        let providers = self.providers(&cache, now);
         BoardResponse {
             schema_version: 1,
             server_time: now,

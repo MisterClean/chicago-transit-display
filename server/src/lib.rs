@@ -5,3 +5,5 @@ pub mod service;
 pub mod transport;
 
 pub mod api;
+
+pub mod schedule;

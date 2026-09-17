@@ -77,3 +77,44 @@ test('mixed train schedules stay labeled in cards and map labels, and canceled b
   const label = page.getByRole('button', { name: 'Merchandise Mart. Show stop details', exact: true });
   await expect(label.locator('.map-times > span').last()).toContainText('Scheduled');
 });
+
+test('Live mode renders published schedules and keeps empty schedule cards labeled', async ({ page }) => {
+  const snapshot = createDemoBoard(defaultConfig);
+  const now = Date.now();
+  const schedule = {
+    version: 'cta-fixture', imported_at: new Date(now - 7 * 86400000).toISOString(),
+    coverage_start: new Date(now - 14 * 86400000).toISOString().slice(0, 10),
+    coverage_end: new Date(now + 14 * 86400000).toISOString().slice(0, 10),
+    valid_until: new Date(now + 15 * 86400000).toISOString(),
+  };
+  for (const card of snapshot.cards.filter(card => card.events.length)) {
+    card.schedule = schedule;
+    card.freshness = { fetched_at: new Date(now).toISOString(), stale_at: new Date(now + 300000).toISOString(), expires_at: new Date(now + 1800000).toISOString(), state: 'fresh' };
+    card.events = card.events.map(event => ({ ...event, time_basis: 'schedule', expected_at: null, scheduled_at: event.expected_at ?? event.scheduled_at, approaching: false, freshness: card.freshness! }));
+    card.message = 'Published schedule · realtime not connected.';
+  }
+  snapshot.cards[1].events = [];
+  snapshot.cards[1].state = 'empty';
+  snapshot.cards[1].message = 'No scheduled departures in the next 3 hours for this selection.';
+  snapshot.providers = snapshot.providers.map(provider => provider.id.startsWith('cta') || provider.id === 'metra' ? { ...provider, active_source: 'schedule', realtime_configured: false, connection_state: 'enabled', schedule, message: 'Published schedules available; realtime is not connected.' } : provider);
+  await page.route('**/api/v1/**', route => {
+    const path = new URL(route.request().url()).pathname;
+    const data = path.endsWith('/capabilities') ? { schema_version: 1, catalog_version: demoCatalog.version, providers: snapshot.providers, geocoding: false, limits: { max_cards: 12, max_radius_m: 2000 } } : path.endsWith('/catalog') ? demoCatalog : snapshot;
+    return route.fulfill({ contentType: 'application/json', body: JSON.stringify(data) });
+  });
+  await page.goto('/');
+  await expect(page.getByLabel('Data mode')).toHaveValue('live');
+  const rail = page.getByRole('article', { name: 'Merchandise Mart, cta train' });
+  await expect(rail.locator('.arrival-time').first()).toHaveAccessibleName(/Scheduled/);
+  await expect(rail.locator('.card-footer')).toContainText('SCHEDULED');
+  await expect(rail).toContainText('Realtime not connected');
+  const bus = page.getByRole('article', { name: 'Orleans & Merchandise Mart, cta bus' });
+  await expect(bus).toContainText('No scheduled departures');
+  await expect(bus.locator('.card-footer')).toContainText('SCHEDULED');
+  await expect(page.getByText('No live predictions', { exact: true })).toHaveCount(0);
+  await expect(page.getByText('DEMO DATA', { exact: true })).toHaveCount(0);
+  await expect(page.getByText('Connected · includes scheduled service')).toBeVisible();
+  await page.getByRole('button', { name: 'Customize', exact: true }).click();
+  // Provider metadata remains available for setup even though no realtime key exists.
+  await expect(page.getByText('Published schedules available; realtime is not connected.').first()).toBeVisible();
+});
