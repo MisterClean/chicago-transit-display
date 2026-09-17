@@ -1,6 +1,6 @@
 /* Setup is a focused workbench above the same live board. */
 .setup-backdrop, .dialog-backdrop { position: fixed; inset: 0; z-index: 20; background: #051014aa; backdrop-filter: blur(5px); display: flex; justify-content: flex-end; }
-.setup-panel { width: min(740px, 100vw); height: 100dvh; background: var(--bg); box-shadow: -20px 0 100px #0005; border-left: 1px solid var(--border); display: flex; flex-direction: column; min-height: 0; }
+.setup-panel { width: min(740px, 100%); height: 100%; background: var(--bg); box-shadow: -20px 0 100px #0005; border-inline-start: 1px solid var(--border); display: flex; flex-direction: column; min-height: 0; }
 .setup-header { padding: 29px 30px 25px; display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; }
 .dialog-eyebrow { font-size: 9px; font-weight: 550; letter-spacing: 1.6px; color: var(--accent); display: block; margin-bottom: 9px; }
 .setup-header h2 { font: 600 26px/1.25 var(--title-font); letter-spacing: -.85px; }
@@ -43,11 +43,11 @@
 .address-candidates svg { color: var(--accent); }
 .location-alternatives { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
 .location-alternatives > span { color: var(--muted); font-size: 10px; }
-.setup-map { height: 280px; border: 1px solid var(--border); border-radius: 8px; position: relative; overflow: hidden; }
+.setup-map { height: clamp(320px, 45dvh, 480px); flex-shrink: 0; border: 1px solid var(--border); border-radius: 8px; position: relative; overflow: hidden; }
 .setup-map .mobility-map-container { height: 100%; }
 .setup-map-help { position: absolute; z-index: 2; display: flex; gap: 7px; align-items: center; bottom: 38px; left: 50%; transform: translateX(-50%); padding: 9px 13px; border-radius: 5px; background: #14232def; color: #f4f3eb; border: 1px solid #87999d33; white-space: nowrap; font-size: 10px; pointer-events: none; }
 .setup-map-help svg { color: #edc177; }
-.coordinate-fields { display: grid; grid-template-columns: 1fr 1fr auto; align-items: end; gap: 12px; }
+.coordinate-fields { display: grid; grid-template-columns: 1fr 1fr; align-items: end; gap: 12px; }
 .coordinate-fields > label { display: flex; flex-direction: column; gap: 7px; font-size: 11px; }
 .coordinate-fields input { width: 100%; font-size: 12px; padding: 10px; }
 .notice-box { display: flex; align-items: flex-start; gap: 10px; font-size: 11px; line-height: 1.65; color: var(--muted-bright); background: var(--surface); border: 1px solid var(--border); padding: 14px 15px; border-radius: 7px; }
@@ -182,3 +182,39 @@
 .toast { position: fixed; z-index: 100; bottom: 28px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 10px; background: var(--surface-high); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 8px 35px #0005; padding: 16px 22px; color: var(--text); font-size: 12px; max-width: min(620px, calc(100vw - 40px)); }
 .toast svg { color: var(--green); flex-shrink: 0; }
 
+/* Location changes share one persistent action bar and an explicit preview. */
+.location-settings { gap: 24px; }
+.location-settings .settings-intro + .setup-map { margin-top: -8px; }
+.location-name { display: grid; gap: 8px; }
+.location-name .text-button { justify-self: start; text-align: start; }
+.location-stops { min-inline-size: 0; margin: 0; padding: 0; border: 0; display: grid; gap: 16px; }
+.location-stops legend { font: 550 17px/1.4 var(--title-font); padding: 0; margin-bottom: 8px; }
+.location-distance-note { color: var(--accent); font-size: 12px; line-height: 1.6; }
+.location-stop-choices { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.location-stop-choices > label { display: flex; align-items: start; gap: 10px; padding: 14px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); font-size: 12px; line-height: 1.5; cursor: pointer; }
+.location-stop-choices > label:has(:checked) { border-color: var(--accent); }
+.location-stop-choices > label:has(:disabled) { opacity: .65; cursor: default; }
+.location-stop-choices small, .location-preview-stop small { display: block; color: var(--muted); font-size: 11px; line-height: 1.6; margin-top: 4px; }
+.location-stops input { width: 16px; height: 16px; flex: 0 0 16px; margin: 2px 0 0; padding: 0; accent-color: var(--accent); }
+.location-preview { display: grid; gap: 12px; padding: 16px; border-radius: 8px; background: var(--surface); }
+.location-preview-stop { display: flex; gap: 12px; align-items: start; min-block-size: 44px; font-size: 12px; }
+.location-preview-stop > svg { flex-shrink: 0; color: var(--muted); margin-top: 2px; }
+.location-preview-stop > span:first-of-type { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.location-preview-stop strong { font-weight: 550; }
+.location-preview-stop .place-distance { margin-top: 2px; white-space: nowrap; }
+.location-details { border-top: 1px solid var(--border); padding-top: 16px; }
+.location-details summary { cursor: pointer; color: var(--muted-bright); font-size: 12px; min-block-size: 32px; }
+.location-details > .coordinate-fields, .location-details > form { margin-top: 12px; }
+.location-details .address-candidates { margin-top: 12px; }
+.location-settings .input-action input { min-width: 0; }
+.setup-footer { flex-shrink: 0; padding-bottom: max(17px, env(safe-area-inset-bottom)); }
+.setup-footer.has-location-draft > span, .setup-footer.has-location-draft > span > svg { color: var(--accent); }
+@media (max-width: 520px) {
+  .location-stop-choices { grid-template-columns: 1fr; }
+  .setup-footer.has-location-draft { flex-wrap: wrap; }
+  .setup-footer.has-location-draft > div { flex: 1 1 100%; }
+  .setup-footer.has-location-draft > div > button { flex: 1; padding-inline: 10px; white-space: normal; }
+  .location-settings .input-action { flex-wrap: wrap; }
+  .location-settings .input-action input { flex-basis: 100%; }
+  .location-settings .input-action button { width: 100%; }
+}

@@ -64,3 +64,31 @@ test('half-screen map preserves all places during pagination, displays both dire
   await expect(mart).toBeFocused();
   expect(errors).toEqual([]);
 });
+
+test('dropping a pin preserves the zoom and viewport instead of recentering', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.route('https://api.protomaps.com/**', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ version: 8, sources: {}, layers: [{ id: 'background', type: 'background', paint: { 'background-color': '#13242b' } }] }) }));
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Customize', exact: true }).click();
+  await page.getByRole('tab', { name: 'Location', exact: true }).click();
+  const map = page.locator('.setup-map');
+  await expect(map.locator('.map-state')).toHaveCount(0);
+  await map.getByRole('button', { name: 'Zoom in', exact: true }).click();
+  await map.getByRole('button', { name: 'Zoom in', exact: true }).click();
+  const canvas = map.locator('canvas');
+  const bounds = await canvas.boundingBox();
+  const target = { x: bounds!.width / 2 + 80, y: bounds!.height / 2 - 40 };
+  await canvas.click({ position: target });
+  await expect(page.getByRole('button', { name: 'Apply location', exact: true })).toBeEnabled();
+  await expect.poll(async () => {
+    const point = await map.locator('.map-origin').evaluate(element => ({ x: parseFloat((element as HTMLElement).style.left), y: parseFloat((element as HTMLElement).style.top) }));
+    return Math.hypot(point.x - target.x, point.y - target.y);
+  }).toBeLessThan(2);
+  const first = Number(await page.getByLabel('Longitude', { exact: true }).inputValue());
+  await canvas.click({ position: { x: target.x + 40, y: target.y } });
+  const second = Number(await page.getByLabel('Longitude', { exact: true }).inputValue());
+  // At zoom 16.4 a 40px movement is about .00033 degrees, rather than .0013 at 14.4.
+  expect(second - first).toBeGreaterThan(0.0002);
+  expect(second - first).toBeLessThan(0.0005);
+  await page.getByRole('button', { name: 'Discard changes', exact: true }).click();
+});

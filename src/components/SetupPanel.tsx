@@ -1,14 +1,15 @@
-import { useEffect, useMemo, useRef, useState, type Dispatch, type FormEvent, type SetStateAction } from 'react';
+import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 import {
-  ArrowDown, ArrowRight, ArrowUp, Bike, Bus, Check, ChevronRight, Copy, Download,
-  Expand, FileUp, LocateFixed, MapPin, Monitor, Plus, Search, ShieldCheck,
+  ArrowDown, ArrowRight, ArrowUp, Bike, Bus, Check, Copy, Download,
+  Expand, FileUp, MapPin, Monitor, Plus, Search, ShieldCheck,
   SlidersHorizontal, TrainFront, TramFront, Trash2, TriangleAlert, X, Zap,
 } from 'lucide-react';
-import MobilityMap from './MobilityMap';
+import LocationSettings from './LocationSettings';
+import { useLocationDraft } from '../lib/useLocationDraft';
 import { metraDisclaimer, stationDataDate } from '../lib/data-notices';
 import { exportConfig, importConfig, displayLink, resetConfig } from '../lib/config';
 import { distanceMeters, formatDistance } from '../lib/format';
-import type { BoardConfig, Catalog, GeocodeResponse, Place, PlaceKind, Provider } from '../lib/types';
+import type { BoardConfig, Catalog, Place, PlaceKind, Provider } from '../lib/types';
 
 type Tab = 'location' | 'connections' | 'display' | 'save';
 type Props = {
@@ -29,7 +30,6 @@ const categories: { id: PlaceKind | 'all'; label: string; icon: typeof Bus; radi
   { id: 'shared_station', label: 'Divvy', icon: Bike, radius: 800 },
 ];
 const uid = () => crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-const validOrigin = (lat: number, lon: number) => Number.isFinite(lat) && Number.isFinite(lon) && lat >= 41.6 && lat <= 42.1 && lon >= -88 && lon <= -87.45;
 
 export default function SetupPanel({ config, setConfig, catalog, providers, mode, setMode, onClose, onDisplay }: Props) {
   const [tab, setTab] = useState<Tab>('connections');
@@ -37,8 +37,31 @@ export default function SetupPanel({ config, setConfig, catalog, providers, mode
   const [feedbackError, setFeedbackError] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
-  const activeTab = useRef(tab);
-  activeTab.current = tab;
+  const location = useLocationDraft(config, catalog);
+  const applyRef = useRef<HTMLButtonElement>(null);
+  const doneRef = useRef<HTMLButtonElement>(null);
+  function requestClose(action = onClose) {
+    if (location.dirty) {
+      setTab('location');
+      announce('Apply or discard your location changes before leaving.', true);
+      requestAnimationFrame(() => applyRef.current?.focus());
+      return;
+    }
+    action();
+  }
+  const closeAction = useRef(requestClose); closeAction.current = requestClose;
+  function applyLocation() {
+    if (!location.canApply) return;
+    setConfig(current => location.apply(current));
+    location.discard();
+    announce('Location applied. Your map, distances, and nearby searches now use this pin.');
+    requestAnimationFrame(() => doneRef.current?.focus());
+  }
+  function discardLocation() {
+    location.discard();
+    announce('Location changes discarded. Your saved board is unchanged.');
+    requestAnimationFrame(() => doneRef.current?.focus());
+  }
 
   function announce(message: string, isError = false) { setFeedback(message); setFeedbackError(isError); }
   useEffect(() => {
@@ -47,9 +70,9 @@ export default function SetupPanel({ config, setConfig, catalog, providers, mode
     const oldOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     const handler = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') { event.preventDefault(); onClose(); }
+      if (event.key === 'Escape') { event.preventDefault(); closeAction.current(); }
       if (event.key !== 'Tab') return;
-      const focusable = panelRef.current?.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [tabindex="0"]');
+      const focusable = panelRef.current?.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), summary, a[href], [tabindex="0"]');
       const elements = Array.from(focusable ?? []).filter(element => element.getClientRects().length > 0);
       if (!elements.length) return;
       const first = elements[0]; const last = elements[elements.length - 1];
@@ -61,7 +84,6 @@ export default function SetupPanel({ config, setConfig, catalog, providers, mode
     // The dialog owns a single focus lifecycle; countdown renders must not steal focus.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  useEffect(() => { setFeedback(''); }, [tab]);
 
   const tabs: { id: Tab; label: string; icon: typeof MapPin }[] = [
     { id: 'location', label: 'Location', icon: MapPin },
@@ -70,23 +92,28 @@ export default function SetupPanel({ config, setConfig, catalog, providers, mode
     { id: 'save', label: 'Save & share', icon: Download },
   ];
 
-  return <div className="setup-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) onClose(); }}>
+  return <div className="setup-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) requestClose(); }}>
     <div ref={panelRef} className="setup-panel" role="dialog" aria-modal="true" aria-labelledby="setup-title">
-      <header className="setup-header"><div><span className="dialog-eyebrow">Settings</span><h2 id="setup-title">Customize display</h2><p>Choose locations, mobility options, and display preferences.</p></div><button ref={closeRef} className="icon-button close-setup" aria-label="Close customization" onClick={onClose}><X size={22} /></button></header>
-      <div className="setup-tabs" role="tablist" aria-label="Board settings">{tabs.map((item, index) => <button role="tab" key={item.id} id={`tab-${item.id}`} aria-controls={`panel-${item.id}`} aria-selected={tab === item.id} tabIndex={tab === item.id ? 0 : -1} className={tab === item.id ? 'active' : ''} onClick={() => setTab(item.id)} onKeyDown={event => {
+      <header className="setup-header"><div><span className="dialog-eyebrow">Settings</span><h2 id="setup-title">Customize display</h2><p>Choose locations, mobility options, and display preferences.</p></div><button ref={closeRef} className="icon-button close-setup" aria-label="Close customization" onClick={() => requestClose()}><X size={22} /></button></header>
+      <div className="setup-tabs" role="tablist" aria-label="Board settings">{tabs.map((item, index) => <button role="tab" key={item.id} id={`tab-${item.id}`} aria-controls={`panel-${item.id}`} aria-selected={tab === item.id} tabIndex={tab === item.id ? 0 : -1} className={tab === item.id ? 'active' : ''} onClick={() => { setFeedback(''); setTab(item.id); }} onKeyDown={event => {
         if (!['ArrowRight', 'ArrowLeft', 'Home', 'End'].includes(event.key)) return;
         event.preventDefault();
         const nextIndex = event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 : (index + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
-        setTab(tabs[nextIndex].id); document.getElementById(`tab-${tabs[nextIndex].id}`)?.focus();
+        setFeedback(''); setTab(tabs[nextIndex].id); document.getElementById(`tab-${tabs[nextIndex].id}`)?.focus();
       }}><item.icon size={16} />{item.label}</button>)}</div>
       <div className="setup-body" role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`}>
-        {tab === 'location' && <LocationSettings mode={mode} config={config} setConfig={setConfig} catalog={catalog} announce={announce} />}
+        {tab === 'location' && <LocationSettings mode={mode} config={config} catalog={catalog} providers={providers} draft={location} announce={announce} />}
         {tab === 'connections' && <ConnectionsSettings config={config} setConfig={setConfig} catalog={catalog} providers={providers} mode={mode} announce={announce} />}
         {tab === 'display' && <DisplaySettings config={config} setConfig={setConfig} mode={mode} setMode={setMode} />}
         {tab === 'save' && <SaveSettings config={config} setConfig={setConfig} mode={mode} announce={announce} />}
       </div>
       {feedback && <div className={`setup-feedback${feedbackError ? ' is-error' : ''}`} role="status">{feedbackError ? <TriangleAlert size={17} /> : <Check size={17} />}<span>{feedback}</span></div>}
-      <footer className="setup-footer"><span><ShieldCheck size={15} />Saved automatically on this device</span><div><button className="secondary-button setup-display" onClick={onDisplay}><Expand size={16} />Display mode</button><button className="primary-button" onClick={onClose}>Done <Check size={17} /></button></div></footer>
+      <footer className={`setup-footer${location.dirty ? ' has-location-draft' : ''}`}>
+        <span role="status">{location.dirty ? <MapPin size={15} /> : <ShieldCheck size={15} />}{location.dirty ? 'Location changes not applied' : tab === 'location' ? 'Location saved on this device' : 'Saved automatically on this device'}</span>
+        <div>{location.dirty ? <button className="secondary-button" onClick={discardLocation}>Discard changes</button> : <>{tab !== 'location' && <button className="secondary-button setup-display" onClick={() => requestClose(onDisplay)}><Expand size={16} />Display mode</button>}<button ref={doneRef} className={tab === 'location' ? 'secondary-button' : 'primary-button'} onClick={() => requestClose()}>Done <Check size={17} /></button></>}
+          {(tab === 'location' || location.dirty) && <button ref={applyRef} className="primary-button" disabled={!location.canApply} onClick={applyLocation}><Check size={16} />Apply location</button>}
+        </div>
+      </footer>
     </div>
   </div>;
 }
@@ -94,83 +121,6 @@ export default function SetupPanel({ config, setConfig, catalog, providers, mode
 type SettingsProps = Pick<Props, 'config' | 'setConfig'>;
 type Announce = (message: string, isError?: boolean) => void;
 
-function LocationSettings({ config, setConfig, catalog, announce, mode }: SettingsProps & { catalog: Catalog; announce: Announce; mode: 'demo' | 'live' }) {
-  const [address, setAddress] = useState('');
-  const [draft, setDraft] = useState(config.origin);
-  const [latitude, setLatitude] = useState(config.origin.lat.toFixed(6));
-  const [longitude, setLongitude] = useState(config.origin.lon.toFixed(6));
-  const [candidates, setCandidates] = useState<GeocodeResponse['candidates']>([]);
-  const [searching, setSearching] = useState(false);
-  const [locating, setLocating] = useState(false);
-  const [accuracy, setAccuracy] = useState<number | null>(null);
-  const [changed, setChanged] = useState(false);
-  const requestRef = useRef<AbortController | null>(null);
-  const deadlineRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const mounted = useRef(true);
-  useEffect(() => { mounted.current = true; return () => { mounted.current = false; requestRef.current?.abort(); if (deadlineRef.current) clearTimeout(deadlineRef.current); }; }, []);
-
-  function setDraftOrigin(origin: { lat: number; lon: number }) {
-    if (!validOrigin(origin.lat, origin.lon)) { announce('Choose a location in the Chicago service area.', true); return; }
-    setDraft(origin); setLatitude(origin.lat.toFixed(6)); setLongitude(origin.lon.toFixed(6)); setChanged(true);
-  }
-  async function searchAddress(event: FormEvent) {
-    event.preventDefault();
-    if (!address.trim()) return;
-    requestRef.current?.abort(); if (deadlineRef.current) clearTimeout(deadlineRef.current);
-    const controller = new AbortController(); requestRef.current = controller;
-    const deadline = setTimeout(() => controller.abort(), 15_000); deadlineRef.current = deadline;
-    setSearching(true); setCandidates([]);
-    try {
-      const response = await fetch('/api/v1/geocode', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: address.trim() }), signal: controller.signal });
-      const result: GeocodeResponse & { error?: string } = await response.json();
-      if (!response.ok) throw new Error(result.error || 'Address search is unavailable. Place a pin or enter coordinates.');
-      if (!Array.isArray(result.candidates)) throw new Error('Address search returned an invalid response. Try a map pin.');
-      const valid = result.candidates.filter(candidate => typeof candidate.label === 'string' && validOrigin(candidate.lat, candidate.lon));
-      setCandidates(valid);
-      if (!valid.length) announce(result.message || 'No Chicago locations found. Try a more specific address or place a map pin.', true);
-      else announce('Choose an address, then confirm your entrance below.');
-    } catch (error) {
-      if (!mounted.current || requestRef.current !== controller) return;
-      if (controller.signal.aborted) announce('Address search timed out. Try again, place a map pin, or enter coordinates.', true);
-      else if (error instanceof Error) announce(error.message, true);
-    } finally {
-      clearTimeout(deadline);
-      if (deadlineRef.current === deadline) deadlineRef.current = null;
-      if (mounted.current && requestRef.current === controller) setSearching(false);
-    }
-  }
-  function useLocation() {
-    if (!navigator.geolocation) { announce('Location is unavailable in this browser. Use the map or coordinates instead.', true); return; }
-    setLocating(true);
-    navigator.geolocation.getCurrentPosition(position => {
-      if (!mounted.current) return;
-      setLocating(false);
-      if (!validOrigin(position.coords.latitude, position.coords.longitude)) { announce('Your location is outside the Chicago service area. Choose a Chicago entrance with the map or coordinates.', true); return; }
-      setAccuracy(Math.round(position.coords.accuracy));
-      setDraftOrigin({ lat: position.coords.latitude, lon: position.coords.longitude });
-      announce(`Location found with approximately ${Math.round(position.coords.accuracy)} m accuracy. Confirm or adjust your entrance pin.`);
-    }, error => {
-      if (!mounted.current) return;
-      setLocating(false); announce(error.code === 1 ? 'Location permission was declined. You can still place a pin or enter coordinates.' : 'Couldn’t find your location. Try a map pin or coordinates.', true);
-    }, { enableHighAccuracy: true, timeout: 12_000, maximumAge: 60_000 });
-  }
-  function confirmLocation() {
-    const lat = Number(latitude); const lon = Number(longitude);
-    if (!latitude.trim() || !longitude.trim() || !validOrigin(lat, lon)) { announce('Enter valid Chicago coordinates: latitude 41.60–42.10 and longitude −88.00 to −87.45.', true); return; }
-    const origin = { lat, lon };
-    setConfig(current => ({ ...current, origin })); setDraft(origin); setChanged(false); announce('Board location saved. Your nearby searches now use this entrance.');
-  }
-  return <div className="settings-stack">
-    <div className="settings-intro"><h3>Board location</h3><p>Set one entrance for distances and nearby vehicles. Use the map or enter coordinates.</p></div>
-    <form onSubmit={event => void searchAddress(event)} className="address-form"><label htmlFor="board-address">Find a Chicago address</label><div className="input-action"><span className="input-icon"><Search size={18} /></span><input id="board-address" value={address} onChange={event => setAddress(event.target.value)} placeholder="Street address, Chicago, IL" maxLength={200} /><button className="primary-button" type="submit" disabled={searching || !address.trim()}>{searching ? 'Searching…' : 'Find address'}</button></div><p className="field-hint">Searching sends the address you submit to Geocodio when connected. Enter an address only, without names or other personal details.</p></form>
-    {candidates.length > 0 && <div className="address-candidates" aria-label="Address results">{candidates.map((candidate, index) => <button key={`${candidate.lat}-${candidate.lon}-${index}`} onClick={() => { setDraftOrigin(candidate); setCandidates([]); }}><MapPin size={17} /><span>{candidate.label}</span><ChevronRight size={17} /></button>)}</div>}
-    <div className="location-alternatives"><button className="secondary-button" onClick={useLocation} disabled={locating}><LocateFixed size={17} />{locating ? 'Finding your location…' : 'Use my location'}</button><span>No ongoing location tracking</span></div>
-    <div className="setup-map"><MobilityMap mode={mode} catalogVersion={catalog.version} origin={draft} places={catalog.places.filter(place => distanceMeters(draft, place) <= 1000).slice(0, 40)} interactive onOriginChange={setDraftOrigin} theme={config.preferences.theme} /><div className="setup-map-help"><MapPin size={15} />Click the map to move your entrance pin</div></div>
-    <div className="coordinate-fields"><label htmlFor="latitude">Latitude<input id="latitude" type="number" min="41.6" max="42.1" step="0.000001" value={latitude} onChange={event => { setLatitude(event.target.value); setChanged(true); }} /></label><label htmlFor="longitude">Longitude<input id="longitude" type="number" min="-88" max="-87.45" step="0.000001" value={longitude} onChange={event => { setLongitude(event.target.value); setChanged(true); }} /></label><button className="primary-button" onClick={confirmLocation}><Check size={16} />{changed ? 'Confirm entrance' : 'Location confirmed'}</button></div>
-    {accuracy !== null && <p className="field-hint">GPS accuracy: approximately {accuracy} m. Distances are straight-line estimates, not walking routes.</p>}
-    <div className="notice-box"><ShieldCheck size={18} /><span>Only your confirmed coordinates are saved. The address you search stays out of your board configuration.</span></div>
-  </div>;
-}
 
 function ConnectionsSettings({ config, setConfig, catalog, providers, mode, announce }: SettingsProps & { catalog: Catalog; providers: Provider[]; mode: 'demo' | 'live'; announce: Announce }) {
   const [category, setCategory] = useState<PlaceKind | 'all'>('all');

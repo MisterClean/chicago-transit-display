@@ -25,6 +25,13 @@ for (const theme of ['dark', 'light'] as const) {
     await page.getByRole('button', { name: 'Customize', exact: true }).click();
     const settings = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze();
     expect(settings.violations).toEqual([]);
+    await page.getByRole('tab', { name: 'Location', exact: true }).click();
+    await page.getByLabel('Location name', { exact: true }).fill('A new corner');
+    await page.getByRole('radio', { name: /Replace with nearby stops/ }).check();
+    const location = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze();
+    expect(location.violations).toEqual([]);
+    await expect(page.getByRole('button', { name: 'Apply location', exact: true })).toBeInViewport();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(320);
     await expect(page.locator('main')).toHaveAttribute('inert', '');
   });
 }

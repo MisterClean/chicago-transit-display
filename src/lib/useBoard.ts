@@ -35,6 +35,7 @@ export function useBoard() {
   const catalogVersion = useRef('');
   const query = useMemo(() => toBoardQuery(config), [config]);
   const queryKey = JSON.stringify(query);
+  const [snapshotQueryKey, setSnapshotQueryKey] = useState(queryKey);
   const refresh = useCallback(() => setRefreshKey(value => value + 1), []);
   const setMode = useCallback((next: DataMode) => {
     if (next === mode) return;
@@ -71,7 +72,7 @@ export function useBoard() {
       if (disposed) return;
       if (mode === 'demo') {
         const response = createDemoBoard(config);
-        setBoard(response); setProviders(response.providers); setCatalog(demoCatalog); setLoading(false); setError(null);
+        setBoard(response); setSnapshotQueryKey(queryKey); setProviders(response.providers); setCatalog(demoCatalog); setLoading(false); setError(null);
         timer = setTimeout(poll, 30000); return;
       }
       if (!navigator.onLine) { setLoading(false); timer = setTimeout(poll, 30000); return; }
@@ -90,7 +91,7 @@ export function useBoard() {
         }
         const response = boardSchema.parse(await getJson('/api/v1/board/query', request.signal, query));
         if (disposed) return;
-        setBoard(response); setProviders(response.providers); setError(null); failures = 0;
+        setBoard(response); setSnapshotQueryKey(queryKey); setProviders(response.providers); setError(null); failures = 0;
         if (response.catalog_version !== catalogVersion.current) catalogVersion.current = '';
         next = Math.max(5000, response.next_poll_after_s * 1000) * (0.95 + Math.random() * 0.1);
       } catch (err) {
@@ -110,5 +111,7 @@ export function useBoard() {
     // Display preferences never trigger provider requests.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, queryKey, refreshKey]);
-  return { config, setConfig, board, catalog, providers, loading, error: error || storageWarning, online, refresh, mode, setMode };
+  // Keep retry snapshots for the same request only. Never show the previous
+  // neighborhood's vehicles or stop cards under a newly applied location.
+  return { config, setConfig, board: snapshotQueryKey === queryKey ? board : null, catalog, providers, loading, error: error || storageWarning, online, refresh, mode, setMode };
 }

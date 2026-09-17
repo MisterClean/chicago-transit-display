@@ -128,4 +128,27 @@ describe('board requests and recovery', () => {
     expect(current.board?.cards.every(card => card.state === 'stale')).toBe(true);
     expect(current.board?.cards[0].freshness?.expires_at).toBe(snapshot.cards[0].freshness?.expires_at);
   });
+
+  it('hides old-location telemetry immediately and ignores a superseded location response', async () => {
+    const pending: ((response: Response) => void)[] = [];
+    const requests: unknown[] = [];
+    vi.stubGlobal('fetch', vi.fn(async (url: string, options: RequestInit) => {
+      if (url.endsWith('/capabilities')) return respond(capabilities());
+      if (url.endsWith('/catalog')) return respond(demoCatalog);
+      requests.push(JSON.parse(options.body as string));
+      if (requests.length === 1) return respond(createDemoBoard(defaultConfig));
+      return new Promise<Response>(resolve => pending.push(resolve));
+    }));
+    await act(async () => root.render(<Harness />));
+    expect(current.board).not.toBeNull();
+    await act(async () => current.setConfig(previous => ({ ...previous, origin: { lat: 41.94, lon: -87.67 } })));
+    expect(current.board).toBeNull();
+    expect(current.loading).toBe(true);
+    await act(async () => current.setConfig(previous => ({ ...previous, origin: { lat: 41.95, lon: -87.68 } })));
+    await act(async () => pending[0](respond(createDemoBoard(defaultConfig))));
+    expect(current.board).toBeNull();
+    await act(async () => pending[1](respond({ ...createDemoBoard(defaultConfig), cards: [] })));
+    expect(current.board?.cards).toEqual([]);
+    expect(requests[2]).toMatchObject({ origin: { lat: 41.95, lon: -87.68 } });
+  });
 });

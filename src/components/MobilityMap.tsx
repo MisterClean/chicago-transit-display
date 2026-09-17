@@ -4,7 +4,7 @@ import mapWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import { Bike, LocateFixed, Minus, Plus, X, Zap } from 'lucide-react';
 import type { BoardCard, Origin, Place, Vehicle } from '../lib/types';
 import { availableVehicles, cardState, departureGroups } from '../lib/presentation';
-import { formatEvent } from '../lib/format';
+import { distanceMeters, formatEvent } from '../lib/format';
 import { placeMapLabels } from '../lib/map-layout';
 import { loadRoutes, type RouteCollection } from '../lib/routes';
 import OperatorLabel from './OperatorLabel';
@@ -16,6 +16,7 @@ type Props = {
   interactive?: boolean; onOriginChange?: (origin: Origin) => void; theme?: 'dark' | 'light';
   now?: number; online?: boolean; mode?: 'demo' | 'live'; timeFormat?: '12h' | '24h';
   catalogVersion?: string;
+  focusKey?: number;
 };
 const layerNames = { bus: 'CTA bus', rail: 'CTA rail', metra: 'Metra' } as const;
 
@@ -34,7 +35,7 @@ function MapCardInfo({ card, now, online, timeFormat }: { card: BoardCard; now: 
   </span>) : <span className="map-data-status">No predictions available</span>}{state === 'stale' && <span className="map-data-status">{online ? 'Stale predictions' : 'Offline · last known predictions'}</span>}</>;
 }
 
-export default function MobilityMap({ origin, places, vehicles = [], cards = [], interactive = false, onOriginChange, theme = 'dark', now = Date.now(), online = true, mode = 'live', timeFormat = '12h', catalogVersion = '' }: Props) {
+export default function MobilityMap({ origin, places, vehicles = [], cards = [], interactive = false, onOriginChange, theme = 'dark', now = Date.now(), online = true, mode = 'live', timeFormat = '12h', catalogVersion = '', focusKey = 0 }: Props) {
   const container = useRef<HTMLDivElement>(null);
   const map = useRef<LibreMap | null>(null);
   const onChange = useRef(onOriginChange); onChange.current = onOriginChange;
@@ -67,6 +68,8 @@ export default function MobilityMap({ origin, places, vehicles = [], cards = [],
   }, [cards]);
   const visibleVehicles = cards.length ? [...new Map(cards.flatMap(card => availableVehicles(card, now, online)).map(vehicle => [vehicle.id, vehicle])).values()] : vehicles;
   const fitKey = JSON.stringify([origin, places.map(place => [place.id, place.lat, place.lon]), visibleVehicles.map(vehicle => vehicle.id)]);
+  // Pin placement and vehicle polling must not reset a view the user is exploring.
+  const cameraKey = editing ? focusKey : JSON.stringify([origin, places.map(place => [place.id, place.lat, place.lon])]);
   const vehiclePositionsKey = JSON.stringify(visibleVehicles.map(vehicle => [vehicle.id, vehicle.lat, vehicle.lon]));
   const closeDetail = () => { setSelected(undefined); selectedTrigger.current?.focus(); };
   useEffect(() => { if (selected) detailClose.current?.focus(); }, [selected]);
@@ -102,25 +105,27 @@ export default function MobilityMap({ origin, places, vehicles = [], cards = [],
         if (editing) instance.on('click', event => {
           if (event.lngLat.lat >= 41.6 && event.lngLat.lat <= 42.1 && event.lngLat.lng >= -88 && event.lngLat.lng <= -87.45) onChange.current?.({ lat: event.lngLat.lat, lon: event.lngLat.lng });
         });
-        resize = new ResizeObserver(() => { instance.resize(); fitRef.current(); }); resize.observe(container.current);
+        resize = new ResizeObserver(() => { instance.resize(); if (!editing) fitRef.current(); }); resize.observe(container.current);
       } catch { if (!disposed) setStatus('unavailable'); }
     }).catch(() => { if (!disposed) setStatus('unavailable'); });
     return () => { disposed = true; clearTimeout(watchdog); cancelAnimationFrame(frame); resize?.disconnect(); map.current?.remove(); map.current = null; };
   }, [key, customStyle, theme, interactive, editing, attempt]);
 
-  function fit() {
+  function fit(allStops = false) {
     const instance = map.current;
     if (!instance) return;
-    if (editing || (!places.length && !visibleVehicles.length)) { instance.jumpTo({ center: [origin.lon, origin.lat], zoom: 14.4 }); return; }
-    const points = [origin, ...places, ...visibleVehicles];
+    if (editing) { instance.jumpTo({ center: [origin.lon, origin.lat] }); return; }
+    const nearby = [...places, ...visibleVehicles].filter(point => allStops || distanceMeters(origin, point) <= 2000);
+    if (!nearby.length) { instance.jumpTo({ center: [origin.lon, origin.lat], zoom: 14.4 }); return; }
+    const points = [origin, ...nearby];
     instance.fitBounds([[Math.min(...points.map(p => p.lon)), Math.min(...points.map(p => p.lat))], [Math.max(...points.map(p => p.lon)), Math.max(...points.map(p => p.lat))]], { padding: { top: 110, bottom: 120, left: 90, right: 90 }, maxZoom: 15.4, duration: 0 });
   }
   fitRef.current = fit;
-  useEffect(fit, [fitKey, generation]);
+  useEffect(() => { fit(); }, [cameraKey, generation]);
 
   useEffect(() => {
     const instance = map.current;
-    if (!instance || !routes || !instance.isStyleLoaded()) return;
+    if (!instance || !routes || !instance.isStyleLoaded() || editing) return;
     if (!instance.getSource('transit-routes')) instance.addSource('transit-routes', { type: 'geojson', data: routes });
     for (const kind of ['bus', 'rail', 'metra'] as const) {
       const id = `transit-${kind}`;
@@ -181,7 +186,7 @@ export default function MobilityMap({ origin, places, vehicles = [], cards = [],
         return <span key={vehicle.id} className="map-vehicle" style={{ left: p.x, top: p.y }} role="img" aria-label={`Undocked Divvy ${vehicle.type === 'electric' ? 'e-bike' : vehicle.type}, ${vehicle.location_label || 'approximate location'}`} title={`Divvy ${vehicle.type === 'electric' ? 'e-bike' : vehicle.type} · ${vehicle.location_label || 'Approximate location'}`}><Bike size={18} /><span>{vehicle.type === 'electric' ? <Zap size={10} /> : 'P'}</span></span>;
       })}
       {originPoint && <span className="map-origin" style={{ left: originPoint.x, top: originPoint.y }} role="img" aria-label="Board location" title="Board location" />}
-      <div className="map-navigation" aria-label="Map navigation"><button aria-label="Zoom in" onClick={() => instance?.zoomIn({ duration: reducedMotion() ? 0 : 150 })}><Plus size={18} /></button><button aria-label="Zoom out" onClick={() => instance?.zoomOut({ duration: reducedMotion() ? 0 : 150 })}><Minus size={18} /></button><button aria-label="Fit all stops" onClick={fit}><LocateFixed size={18} /></button></div>
+      <div className="map-navigation" aria-label="Map navigation"><button aria-label="Zoom in" onClick={() => instance?.zoomIn({ duration: reducedMotion() ? 0 : 150 })}><Plus size={18} /></button><button aria-label="Zoom out" onClick={() => instance?.zoomOut({ duration: reducedMotion() ? 0 : 150 })}><Minus size={18} /></button><button aria-label={editing ? 'Center on pin' : 'Fit all stops'} onClick={() => fit(true)}><LocateFixed size={18} /></button></div>
       {selectedPlace && <section className="map-selected-detail" aria-label={`${selectedPlace.name} details`} onKeyDown={event => { if (event.key === 'Escape') closeDetail(); }}><header><OperatorLabel provider={selectedPlace.provider_id} /><strong>{selectedPlace.name}</strong><button ref={detailClose} aria-label="Close stop details" onClick={closeDetail}><X size={18} /></button></header>{mergedCards.has(selectedPlace.id) ? <MapCardInfo card={mergedCards.get(selectedPlace.id)!} now={now} online={online} timeFormat={timeFormat} /> : <span>{selectedPlace.routes.join(' · ')}</span>}{mode === 'demo' && <small>Demo data</small>}</section>}
       {!editing && <div className="map-bottom-note">{routesError ? <><span>Route lines unavailable</span><button onClick={() => setAttempt(v => v + 1)}>Retry</button></> : <span>Route paths{routes ? ` · ${new Date(routes.imported_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` : ' loading…'} · may exclude detours</span>}</div>}
     </>}
